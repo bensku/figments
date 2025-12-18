@@ -1,0 +1,14 @@
+services:
+  localstack:
+    image: docker.io/localstack/localstack:latest
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3
+      - DEBUG=0
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - ./localstack-init:/etc/localstack/init/ready.d:z
+
+volumes:
+  localstack_data:

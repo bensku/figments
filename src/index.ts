@@ -1,0 +1,90 @@
+import type { ServerWebSocket } from 'bun';
+import { hocuspocus } from './sync/server';
+import { WsAdapter } from './sync/ws-adapter';
+import index from './index.html';
+
+const isDev = process.env.NODE_ENV !== 'production';
+
+interface WebSocketData {
+    request: any;
+    adapter: WsAdapter;
+}
+
+/**
+ * Create a minimal IncomingMessage-like object from a Bun Request.
+ * Hocuspocus only needs .headers and .url properties.
+ */
+function toIncomingMessage(request: Request) {
+    const url = new URL(request.url);
+    const headers: Record<string, string> = {};
+    request.headers.forEach((value, key) => {
+        headers[key] = value;
+    });
+    return {
+        headers,
+        url: url.pathname + url.search,
+    };
+}
+
+const server = Bun.serve({
+    routes: {
+        '/*': index,
+
+        '/ws': async (req, server) => {
+            if (
+                server.upgrade(req, {
+                    data: {
+                        request: toIncomingMessage(req),
+                        adapter: new WsAdapter(),
+                    },
+                })
+            ) {
+                return; // WS estabilished, no need to reply
+            }
+            return new Response('WebSocket upgrade failed', { status: 400 });
+        },
+    },
+
+    websocket: {
+        data: {} as WebSocketData,
+        open(ws: ServerWebSocket<WebSocketData>) {
+            const { request, adapter } = ws.data;
+
+            // Initialize adapter with the actual WebSocket
+            adapter.initialize(ws);
+
+            // Hand off to Hocuspocus
+            // biome-ignore lint/suspicious/noExplicitAny: Hocuspocus expects ws WebSocket type
+            hocuspocus.handleConnection(adapter as any, request);
+        },
+
+        message(ws: ServerWebSocket<WebSocketData>, message) {
+            // Convert ArrayBuffer to Uint8Array if needed
+            const data =
+                message instanceof ArrayBuffer
+                    ? new Uint8Array(message)
+                    : message;
+            ws.data.adapter.emit('message', data);
+        },
+
+        close(ws: ServerWebSocket<WebSocketData>, code, reason) {
+            ws.data.adapter.emit('close', code, reason);
+        },
+
+        pong(ws: ServerWebSocket<WebSocketData>) {
+            ws.data.adapter.emit('pong');
+        },
+    },
+
+    development: isDev && {
+        // Enable browser hot reloading in development
+        hmr: true,
+
+        // Echo console logs from the browser to the server
+        console: true,
+    },
+});
+
+console.log(
+    `Server running at http://localhost:${server.port} (${isDev ? 'development' : 'production'} mode)`,
+);
