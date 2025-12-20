@@ -63,7 +63,9 @@ export function Dropdown({
             {/* biome-ignore lint/a11y/useKeyWithClickEvents: trigger element handles keyboard events */}
             {/* biome-ignore lint/a11y/noStaticElementInteractions: wrapper delegates to interactive trigger */}
             <span
-                onClick={triggerOnContextMenu ? undefined : () => setIsOpen(!isOpen)}
+                onClick={
+                    triggerOnContextMenu ? undefined : () => setIsOpen(!isOpen)
+                }
                 onContextMenu={handleContextMenu}
                 className="contents"
             >

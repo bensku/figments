@@ -23,6 +23,7 @@
         "react-dom": "^19.2.3",
         "react-markdown": "^10.1.0",
         "tailwindcss": "^4.1.18",
+        "wouter": "^3.9.0",
         "yjs": "^13.6.28",
         "zod": "^4.2.1"
     },

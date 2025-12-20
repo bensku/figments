@@ -216,7 +216,8 @@ function SidebarContent({
                                         setRenamingTitle(e.target.value)
                                     }
                                     onKeyDown={(e) => {
-                                        if (e.key === 'Enter') handleSaveRename();
+                                        if (e.key === 'Enter')
+                                            handleSaveRename();
                                         if (e.key === 'Escape')
                                             handleCancelRename();
                                     }}

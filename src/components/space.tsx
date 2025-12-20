@@ -8,7 +8,17 @@ import { DEFAULT_PERSONAS, PersonaTable } from '@/tables/persona';
 // biome-ignore lint/style/noNonNullAssertion: this context is never accessed outside useSpace, which throws if it is null
 const SpaceContext = createContext<Y.Doc>(null!);
 
-export const Space = ({ id }: { id: string }) => {
+interface SpaceProps {
+    id: string;
+    initialFocusedNode: string | null;
+    onFocusChange: (nodeId: string | null) => void;
+}
+
+export const Space = ({
+    id,
+    initialFocusedNode,
+    onFocusChange,
+}: SpaceProps) => {
     const [doc, setDoc] = useState<Y.Doc>();
 
     // When we first load or when open space changes, resync Yjs Doc
@@ -51,7 +61,10 @@ export const Space = ({ id }: { id: string }) => {
         <SpaceContext.Provider value={doc}>
             <div className="flex flex-col h-full">
                 <div className="flex-1 overflow-hidden">
-                    <ConversationView />
+                    <ConversationView
+                        initialFocusedNode={initialFocusedNode}
+                        onFocusChange={onFocusChange}
+                    />
                 </div>
             </div>
         </SpaceContext.Provider>

@@ -1,27 +1,51 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSpace } from '@/components/space';
 import { useView } from '@/context/view';
 import { GraphView } from './graph/GraphView';
 import { useConversationTree } from './hooks/useConversationTree';
 import { StrandView } from './strand/StrandView';
 
+interface ConversationViewProps {
+    initialFocusedNode: string | null;
+    onFocusChange: (nodeId: string | null) => void;
+}
+
 /**
  * Main container for conversation visualization.
  */
-export function ConversationView() {
+export function ConversationView({
+    initialFocusedNode,
+    onFocusChange,
+}: ConversationViewProps) {
     const doc = useSpace();
     const tree = useConversationTree(doc);
     const { viewMode, setViewMode, toggleViewMode } = useView();
 
-    // Find initial selected node (first root node, or null if empty)
-    const initialNode = useMemo(() => {
+    // Find default node (first root node, or null if empty)
+    const defaultNode = useMemo(() => {
         return tree.rootNodes[0] ?? null;
     }, [tree.rootNodes]);
 
+    // Use URL-provided node if valid, otherwise fall back to default
+    const resolvedInitialNode = useMemo(() => {
+        if (initialFocusedNode && tree.nodes.has(initialFocusedNode)) {
+            return initialFocusedNode;
+        }
+        return defaultNode;
+    }, [initialFocusedNode, tree.nodes, defaultNode]);
+
     const [selectedNode, setSelectedNode] = useState<string | null>(
-        initialNode,
+        resolvedInitialNode,
     );
-    const [focusedNode, setFocusedNode] = useState<string | null>(initialNode);
+    const [focusedNode, setFocusedNode] = useState<string | null>(
+        resolvedInitialNode,
+    );
+
+    // Sync internal state when URL-derived node changes (e.g., browser back/forward)
+    useEffect(() => {
+        setFocusedNode(resolvedInitialNode);
+        setSelectedNode(resolvedInitialNode);
+    }, [resolvedInitialNode]);
 
     // Single click - only select (for main strand nodes)
     const selectNode = useCallback((id: string | null) => {
@@ -29,10 +53,14 @@ export function ConversationView() {
     }, []);
 
     // Double click, focus button, or clicking alternatives/branches - select AND focus
-    const focusNode = useCallback((id: string | null) => {
-        setSelectedNode(id);
-        setFocusedNode(id);
-    }, []);
+    const focusNode = useCallback(
+        (id: string | null) => {
+            setSelectedNode(id);
+            setFocusedNode(id);
+            onFocusChange(id);
+        },
+        [onFocusChange],
+    );
 
     const switchToStrand = () => setViewMode('strand');
 
