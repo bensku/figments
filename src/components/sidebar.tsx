@@ -92,11 +92,48 @@ function SidebarContent({
     const [newTitle, setNewTitle] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
 
+    // Renaming state for space names
+    const [renamingSpaceId, setRenamingSpaceId] = useState<string | null>(null);
+    const [renamingTitle, setRenamingTitle] = useState('');
+    const renameInputRef = useRef<HTMLInputElement>(null);
+
     useEffect(() => {
         if (isCreating && inputRef.current) {
             inputRef.current.focus();
         }
     }, [isCreating]);
+
+    useEffect(() => {
+        if (renamingSpaceId && renameInputRef.current) {
+            renameInputRef.current.focus();
+            renameInputRef.current.select();
+        }
+    }, [renamingSpaceId]);
+
+    const handleStartRenaming = (spaceId: string, currentTitle: string) => {
+        setRenamingSpaceId(spaceId);
+        setRenamingTitle(currentTitle);
+    };
+
+    const handleSaveRename = () => {
+        if (!renamingSpaceId || !renamingTitle.trim()) {
+            setRenamingSpaceId(null);
+            return;
+        }
+
+        upsert(doc, SpaceTable, {
+            key: renamingSpaceId,
+            spaceId: renamingSpaceId,
+            title: renamingTitle.trim(),
+        });
+
+        setRenamingSpaceId(null);
+    };
+
+    const handleCancelRename = () => {
+        setRenamingSpaceId(null);
+        setRenamingTitle('');
+    };
 
     const handleCreateSpace = () => {
         if (!newTitle.trim()) return;
@@ -168,22 +205,62 @@ function SidebarContent({
                 )}
 
                 {spaces.map((space) => (
-                    <button
-                        key={space.key}
-                        type="button"
-                        onClick={() => onOpenSpace(space.spaceId)}
-                        className={`
-                            w-full text-left px-3 py-2 rounded-lg text-sm mb-1
-                            transition-colors
-                            ${
-                                space.spaceId === openSpace
-                                    ? 'bg-blue-100 text-blue-800 font-medium'
-                                    : 'text-gray-700 hover:bg-gray-100'
-                            }
-                        `}
-                    >
-                        {space.title}
-                    </button>
+                    <div key={space.key} className="mb-1">
+                        {renamingSpaceId === space.spaceId ? (
+                            <div className="px-2 py-1">
+                                <input
+                                    ref={renameInputRef}
+                                    type="text"
+                                    value={renamingTitle}
+                                    onChange={(e) =>
+                                        setRenamingTitle(e.target.value)
+                                    }
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleSaveRename();
+                                        if (e.key === 'Escape')
+                                            handleCancelRename();
+                                    }}
+                                    onBlur={handleSaveRename}
+                                    className="w-full px-2 py-1 text-sm border border-blue-500 rounded focus:outline-none"
+                                />
+                            </div>
+                        ) : (
+                            <Dropdown
+                                trigger={
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            onOpenSpace(space.spaceId)
+                                        }
+                                        className={`
+                                            w-full text-left px-3 py-2 rounded-lg text-sm
+                                            transition-colors
+                                            ${
+                                                space.spaceId === openSpace
+                                                    ? 'bg-blue-100 text-blue-800 font-medium'
+                                                    : 'text-gray-700 hover:bg-gray-100'
+                                            }
+                                        `}
+                                    >
+                                        {space.title}
+                                    </button>
+                                }
+                                triggerOnContextMenu
+                                align="left"
+                            >
+                                <DropdownItem
+                                    onClick={() =>
+                                        handleStartRenaming(
+                                            space.spaceId,
+                                            space.title,
+                                        )
+                                    }
+                                >
+                                    Rename
+                                </DropdownItem>
+                            </Dropdown>
+                        )}
+                    </div>
                 ))}
 
                 {isCreating && (

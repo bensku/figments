@@ -4,12 +4,14 @@ interface DropdownProps {
     trigger: ReactNode;
     children: ReactNode;
     align?: 'left' | 'right';
+    triggerOnContextMenu?: boolean;
 }
 
 export function Dropdown({
     trigger,
     children,
     align = 'right',
+    triggerOnContextMenu = false,
 }: DropdownProps) {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -49,11 +51,22 @@ export function Dropdown({
         };
     }, [isOpen]);
 
+    const handleContextMenu = (e: React.MouseEvent) => {
+        if (triggerOnContextMenu) {
+            e.preventDefault();
+            setIsOpen(!isOpen);
+        }
+    };
+
     return (
         <div ref={dropdownRef} className="relative">
             {/* biome-ignore lint/a11y/useKeyWithClickEvents: trigger element handles keyboard events */}
             {/* biome-ignore lint/a11y/noStaticElementInteractions: wrapper delegates to interactive trigger */}
-            <span onClick={() => setIsOpen(!isOpen)} className="contents">
+            <span
+                onClick={triggerOnContextMenu ? undefined : () => setIsOpen(!isOpen)}
+                onContextMenu={handleContextMenu}
+                className="contents"
+            >
                 {trigger}
             </span>
             {isOpen && (

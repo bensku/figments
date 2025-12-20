@@ -1,32 +1,14 @@
 import { HocuspocusProvider } from '@hocuspocus/provider';
-import { any, eq, select, upsert } from '@bensku/y-query';
-import { useQuery } from '@bensku/y-query-react';
+import { any, select, upsert } from '@bensku/y-query';
 import { createContext, useContext, useEffect, useState } from 'react';
 import * as Y from 'yjs';
 import { ConversationView } from './conversation';
 import { DEFAULT_PERSONAS, PersonaTable } from '@/tables/persona';
-import { SpaceHeader } from './header/SpaceHeader';
-import { useUser } from '@/context/user';
-import { SpaceTable } from '@/tables/user';
 
 // biome-ignore lint/style/noNonNullAssertion: this context is never accessed outside useSpace, which throws if it is null
 const SpaceContext = createContext<Y.Doc>(null!);
 
 export const Space = ({ id }: { id: string }) => {
-    const { userDoc } = useUser();
-
-    if (!userDoc) {
-        return (
-            <div className="h-full flex items-center justify-center text-gray-500">
-                Loading...
-            </div>
-        );
-    }
-
-    return <SpaceContent id={id} userDoc={userDoc} />;
-};
-
-function SpaceContent({ id, userDoc }: { id: string; userDoc: Y.Doc }) {
     const [doc, setDoc] = useState<Y.Doc>();
 
     // When we first load or when open space changes, resync Yjs Doc
@@ -57,16 +39,6 @@ function SpaceContent({ id, userDoc }: { id: string; userDoc: Y.Doc }) {
         };
     }, [id]);
 
-    // Subscribe to space title from user doc
-    const spaces = useQuery(
-        userDoc,
-        SpaceTable,
-        () => eq('spaceId', id),
-        [id],
-        'content',
-    );
-    const title = spaces[0]?.title ?? 'Loading...';
-
     if (!doc) {
         return (
             <div className="h-full flex items-center justify-center text-gray-500">
@@ -78,14 +50,13 @@ function SpaceContent({ id, userDoc }: { id: string; userDoc: Y.Doc }) {
     return (
         <SpaceContext.Provider value={doc}>
             <div className="flex flex-col h-full">
-                <SpaceHeader spaceId={id} title={title} />
                 <div className="flex-1 overflow-hidden">
                     <ConversationView />
                 </div>
             </div>
         </SpaceContext.Provider>
     );
-}
+};
 
 export function useSpace() {
     const doc = useContext(SpaceContext);

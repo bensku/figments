@@ -117,7 +117,7 @@ export function TreeCanvas({ children }: TreeCanvasProps) {
     return (
         <div className="relative w-full h-full overflow-hidden bg-gray-50">
             {/* Controls */}
-            <div className="absolute top-2 right-2 z-10 flex gap-1">
+            <div className="absolute top-2 left-2 z-10 flex gap-1">
                 <button
                     type="button"
                     onClick={() =>
