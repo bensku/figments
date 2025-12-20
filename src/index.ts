@@ -6,7 +6,7 @@ import index from './index.html';
 const isDev = process.env.NODE_ENV !== 'production';
 
 interface WebSocketData {
-    request: any;
+    request: ReturnType<typeof toIncomingMessage>;
     adapter: WsAdapter;
 }
 
@@ -54,8 +54,8 @@ const server = Bun.serve({
             adapter.initialize(ws);
 
             // Hand off to Hocuspocus
-            // biome-ignore lint/suspicious/noExplicitAny: Hocuspocus expects ws WebSocket type
-            hocuspocus.handleConnection(adapter as any, request);
+            // biome-ignore lint/suspicious/noExplicitAny: Hocuspocus expects ws WebSocket and IncomingMessage types
+            hocuspocus.handleConnection(adapter as any, request as any);
         },
 
         message(ws: ServerWebSocket<WebSocketData>, message) {

@@ -1,6 +1,6 @@
-import { FragmentTable, NodeTable } from '@/tables/node';
+import { ChoiceTable, FragmentTable, NodeTable } from '@/tables/node';
 import { PersonaTable } from '@/tables/persona';
-import { getKey, upsert, type Row } from '@bensku/y-query';
+import { getKey, update, upsert, type Row } from '@bensku/y-query';
 import * as Y from 'yjs';
 import { MODEL_MAP } from './model';
 import { loadContext } from './context';
@@ -105,8 +105,44 @@ export async function generateFragments(
     }
 
     // Mark LLM node as completed
-    upsert(doc, NodeTable, {
-        ...node,
+    update(doc, NodeTable, {
+        key: node.key,
         completed: true,
+    });
+
+    // Summarize node in background for card views
+    generateSummary(doc, node);
+
+    // Generate pre-determined choices
+    generateChoices(doc, node);
+}
+
+async function generateSummary(doc: Y.Doc, node: Row<typeof NodeTable>) {
+    // TODO non-stub
+    update(doc, NodeTable, {
+        key: node.key,
+        summary: 'Lorem ipsum',
+    });
+}
+
+async function generateChoices(doc: Y.Doc, node: Row<typeof NodeTable>) {
+    // TODO non-stub
+    upsert(doc, ChoiceTable, {
+        key: crypto.randomUUID(),
+        node: node.key,
+        ordinal: 0,
+        value: 'Foo bar baz',
+    });
+    upsert(doc, ChoiceTable, {
+        key: crypto.randomUUID(),
+        node: node.key,
+        ordinal: 1,
+        value: 'Test choice',
+    });
+    upsert(doc, ChoiceTable, {
+        key: crypto.randomUUID(),
+        node: node.key,
+        ordinal: 2,
+        value: 'Hello, world!',
     });
 }

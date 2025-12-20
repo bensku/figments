@@ -21,6 +21,7 @@
         "bun-plugin-tailwind": "^0.1.2",
         "react": "^19.2.3",
         "react-dom": "^19.2.3",
+        "react-markdown": "^10.1.0",
         "tailwindcss": "^4.1.18",
         "yjs": "^13.6.28",
         "zod": "^4.2.1"

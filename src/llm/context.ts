@@ -1,6 +1,6 @@
 import { FragmentTable, NodeTable } from '@/tables/node';
 import { and, eq, getKey, select, type Row } from '@bensku/y-query';
-import type { ModelMessage } from 'ai';
+import type { AssistantContent, ModelMessage, TextPart, UserContent } from 'ai';
 import type * as Y from 'yjs';
 
 export function loadContext(
@@ -43,14 +43,17 @@ function toMessage(
     const parts = fragments.map(toPart);
     switch (creator) {
         case 'user':
+            // User messages can only have text parts
             return {
                 role: 'user',
-                content: parts as any,
+                content: parts.filter(
+                    (p): p is TextPart => p.type === 'text',
+                ) as UserContent,
             };
         case 'llm':
             return {
                 role: 'assistant',
-                content: parts as any,
+                content: parts as AssistantContent,
             };
     }
 }

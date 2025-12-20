@@ -30,8 +30,6 @@ export const NodeTable = table(
          * For LLM-created nodes, the "persona" to use. A persona is a
          * collection of the model, its configuration (including tools) and
          * (system) prompt.
-         * 
-         * For user-created nodes, the user id.
          */
         author: z.string(),
 
@@ -89,7 +87,7 @@ export const FragmentTable = table(
             z.object({
                 type: z.literal('text'),
                 text: z.instanceof(Y.Text).meta({ syncAs: Y.Text }),
-            })
+            }),
         ]),
     }),
 );
@@ -98,14 +96,14 @@ export const FragmentTable = table(
  * Generated replies to nodes. User can take these in lieu of writing replies
  * themself.
  */
-export const ChoicesTable = table(
+export const ChoiceTable = table(
     'choices',
     z.object({
         key: z.string(),
         node: z.string(),
 
         /**
-         * Ordinal of this choice, if it was automatically generated.
+         * Ordinal of this choice.
          */
         ordinal: z.number(),
 
