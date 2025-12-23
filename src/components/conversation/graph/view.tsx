@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
+import { EmptyState } from '@/components/ui/empty-state';
 import type { StrandState, TreeState } from '../types';
-import { TreeCanvas } from './TreeCanvas';
-import { TreeEdge } from './TreeEdge';
-import { TreeNode } from './TreeNode';
+import { TreeCanvas } from './canvas';
+import { TreeEdge } from './edge';
+import { TreeNode } from './node';
 
 interface GraphViewProps {
     tree: TreeState;
@@ -105,14 +106,10 @@ export function GraphView({ tree, strand, onSwitchToStrand }: GraphViewProps) {
 
     if (tree.nodes.size === 0) {
         return (
-            <div className="h-full flex items-center justify-center">
-                <div className="text-center text-gray-500 py-8">
-                    <p className="text-lg mb-2">No conversation yet</p>
-                    <p className="text-sm">
-                        Switch to conversation view to start chatting
-                    </p>
-                </div>
-            </div>
+            <EmptyState
+                message="No conversation yet"
+                secondaryMessage="Switch to conversation view to start chatting"
+            />
         );
     }
 

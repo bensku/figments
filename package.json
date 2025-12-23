@@ -8,7 +8,8 @@
         "run": "NODE_ENV=production bun src/index.ts",
         "format": "biome format --write",
         "lint": "biome lint --write",
-        "check": "biome check --write"
+        "typecheck": "tsc --noEmit",
+        "check": "biome check --write && tsc --noEmit"
     },
     "dependencies": {
         "@ai-sdk/anthropic": "^2.0.56",

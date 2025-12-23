@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSpace } from '@/components/space';
 import { useView } from '@/context/view';
-import { GraphView } from './graph/GraphView';
+import { GraphView } from './graph/view';
 import { useConversationTree } from './hooks/useConversationTree';
-import { StrandView } from './strand/StrandView';
+import { StrandView } from './strand/view';
 
 interface ConversationViewProps {
     initialFocusedNode: string | null;

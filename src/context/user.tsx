@@ -1,4 +1,3 @@
-import { HocuspocusProvider } from '@hocuspocus/provider';
 import {
     createContext,
     type ReactNode,
@@ -6,7 +5,8 @@ import {
     useEffect,
     useState,
 } from 'react';
-import * as Y from 'yjs';
+import type * as Y from 'yjs';
+import { createHocuspocusConnection } from '@/sync/hocuspocus';
 
 interface UserContextValue {
     userId: string;
@@ -30,25 +30,12 @@ export function UserProvider({
     const [userDoc, setUserDoc] = useState<Y.Doc | null>(null);
 
     useEffect(() => {
-        const document = new Y.Doc();
-        const provider = new HocuspocusProvider({
-            url: `ws://${location.hostname}:${location.port}/ws`,
+        const connection = createHocuspocusConnection({
             name: `user.${userId}`,
-            document,
-            onAuthenticationFailed: () => location.reload(),
-            onClose: ({ event }) => {
-                // Hocuspocus uses 4401 (Unauthorized) and 4403 (Forbidden)
-                if (event.code === 4401 || event.code === 4403) {
-                    location.reload();
-                }
-            },
         });
-        setUserDoc(document);
+        setUserDoc(connection.doc);
 
-        return () => {
-            provider.destroy();
-            document.destroy();
-        };
+        return () => connection.destroy();
     }, [userId]);
 
     return (

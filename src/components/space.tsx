@@ -1,7 +1,7 @@
 import { any, select, upsert } from '@bensku/y-query';
-import { HocuspocusProvider } from '@hocuspocus/provider';
 import { createContext, useContext, useEffect, useState } from 'react';
-import * as Y from 'yjs';
+import type * as Y from 'yjs';
+import { createHocuspocusConnection } from '@/sync/hocuspocus';
 import { DEFAULT_PERSONAS, PersonaTable } from '@/tables/persona';
 import { ConversationView } from './conversation';
 
@@ -26,34 +26,22 @@ export const Space = ({
         // Clear doc while loading new space
         setDoc(undefined);
 
-        const document = new Y.Doc();
-        const provider = new HocuspocusProvider({
-            url: `ws://${location.hostname}:${location.port}/ws`,
+        const connection = createHocuspocusConnection({
             name: id,
-            document,
-            onSynced() {
+            onSynced(doc) {
                 // Add default personas if space has none
-                const existingPersonas = select(document, PersonaTable, any());
+                const existingPersonas = select(doc, PersonaTable, any());
                 if (existingPersonas.length === 0) {
                     for (const persona of DEFAULT_PERSONAS) {
-                        upsert(document, PersonaTable, persona);
+                        upsert(doc, PersonaTable, persona);
                     }
                 }
                 // Only expose doc after sync to prevent creating duplicate drafts
-                setDoc(document);
-            },
-            onAuthenticationFailed: () => location.reload(),
-            onClose: ({ event }) => {
-                // Hocuspocus uses 4401 (Unauthorized) and 4403 (Forbidden)
-                if (event.code === 4401 || event.code === 4403) {
-                    location.reload();
-                }
+                setDoc(doc);
             },
         });
 
-        return () => {
-            provider.destroy();
-        };
+        return () => connection.destroy();
     }, [id]);
 
     if (!doc) {

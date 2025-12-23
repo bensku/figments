@@ -1,4 +1,4 @@
-import { ViewToggle } from './ViewToggle';
+import { ViewToggle } from './toggle';
 
 export function SpaceHeader() {
     return (

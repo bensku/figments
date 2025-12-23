@@ -1,13 +1,13 @@
 import { any, type Row } from '@bensku/y-query';
 import { useQuery } from '@bensku/y-query-react';
 import { useCallback, useMemo } from 'react';
+import { EmptyState } from '@/components/ui/empty-state';
 import { NodeTable } from '@/tables/node';
 import { hashStringToHue } from '@/utils/colors';
 import { useSpace } from '../../space';
-import { MessageInput } from './MessageInput';
-import { StrandNode } from './StrandNode';
-import { TimelineAlternatives } from './TimelineAlternatives';
-import { TimelineMarker } from './TimelineMarker';
+import { MessageInput } from './input';
+import { StrandNode } from './node';
+import { TimelineAlternatives, TimelineMarker } from './timeline';
 
 export function StrandView({
     selectedNode,
@@ -65,16 +65,13 @@ export function StrandView({
         const roots = parentToNode.get('root');
         if (!roots || !roots[0]) {
             return (
-                <div className="flex flex-col h-full">
-                    <div className="flex-1 flex items-center justify-center text-gray-400">
-                        Start a new conversation
-                    </div>
+                <EmptyState message="Start a new conversation">
                     <div className="w-full max-w-6xl mx-auto px-4 lg:px-8 pb-6">
                         <div className="max-w-[calc(100%-14rem)]">
                             <MessageInput node={null} selectNode={focusNode} />
                         </div>
                     </div>
-                </div>
+                </EmptyState>
             );
         }
         effectiveFocusedNode = roots[0].key;
@@ -105,16 +102,13 @@ export function StrandView({
     // Empty space case: show placeholder and message input NOT attached to a node
     if (strandNodes.length === 0 && !effectiveFocusedNode) {
         return (
-            <div className="flex flex-col h-full">
-                <div className="flex-1 flex items-center justify-center text-gray-400">
-                    Start a new conversation
-                </div>
+            <EmptyState message="Start a new conversation">
                 <div className="w-full max-w-6xl mx-auto px-4 lg:px-8 pb-6">
                     <div className="max-w-[calc(100%-14rem)]">
                         <MessageInput node={null} selectNode={focusNode} />
                     </div>
                 </div>
-            </div>
+            </EmptyState>
         );
     }
 

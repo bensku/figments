@@ -1,24 +1,26 @@
 import { eq, type Row } from '@bensku/y-query';
 import { useQuery, useRow } from '@bensku/y-query-react';
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import Markdown from 'react-markdown';
 import { useSpace } from '@/components/space';
 import { FragmentTable, NodeTable } from '@/tables/node';
 import { hashStringToHue } from '@/utils/colors';
 
-export function StrandNode({
-    id,
-    selected,
-    focused,
-    selectNode,
-    focusNode,
-}: {
+interface StrandNodeProps {
     id: string;
     selected: boolean;
     focused: boolean;
     selectNode: (id: string | null) => void;
     focusNode: (id: string | null) => void;
-}) {
+}
+
+export const StrandNode = memo(function StrandNode({
+    id,
+    selected,
+    focused,
+    selectNode,
+    focusNode,
+}: StrandNodeProps) {
     const doc = useSpace();
     const node = useRow(doc, NodeTable, id, 'content');
     const [isHovered, setIsHovered] = useState(false);
@@ -164,7 +166,7 @@ export function StrandNode({
             )}
         </div>
     );
-}
+});
 
 function FragmentRenderer({
     fragment,
