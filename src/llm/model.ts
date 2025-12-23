@@ -1,6 +1,9 @@
-import { anthropic } from '@ai-sdk/anthropic';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createOpenAI } from '@ai-sdk/openai';
 import type { LanguageModel } from 'ai';
-import { MockLanguageModelV2 } from 'ai/test';
+import { MockLanguageModelV3 } from 'ai/test';
+import { CONFIG } from '../config';
+import type { ModelConfig } from '../config/schema';
 
 export interface Model {
     id: string;
@@ -16,10 +19,41 @@ function register(model: Model) {
     MODELS.push(model);
 }
 
+function createLanguageModel(config: ModelConfig): LanguageModel {
+    const apiKey = config.apiKeyEnv ? process.env[config.apiKeyEnv] : undefined;
+
+    switch (config.provider) {
+        case 'anthropic': {
+            const anthropic = createAnthropic({
+                baseURL: config.baseUrl,
+                apiKey,
+            });
+            return anthropic(config.model);
+        }
+        case 'openai': {
+            const openai = createOpenAI({
+                baseURL: config.baseUrl,
+                apiKey,
+            });
+            return openai(config.model);
+        }
+    }
+}
+
+// Register models from config
+for (const modelConfig of CONFIG.models) {
+    register({
+        id: modelConfig.id,
+        displayName: modelConfig.displayName,
+        model: createLanguageModel(modelConfig),
+    });
+}
+
+// Test model for development
 register({
     id: 'test',
     displayName: 'Test model',
-    model: new MockLanguageModelV2({
+    model: new MockLanguageModelV3({
         doStream: async () => ({
             stream: new ReadableStream({
                 async start(controller) {
@@ -70,11 +104,22 @@ register({
 
                     controller.enqueue({
                         type: 'finish',
-                        finishReason: 'stop',
+                        finishReason: {
+                            unified: 'stop',
+                            raw: 'stop',
+                        },
                         usage: {
-                            inputTokens: 25,
-                            outputTokens: 45,
-                            totalTokens: 70,
+                            inputTokens: {
+                                total: 25,
+                                noCache: 25,
+                                cacheRead: undefined,
+                                cacheWrite: undefined,
+                            },
+                            outputTokens: {
+                                total: 45,
+                                text: 45,
+                                reasoning: undefined,
+                            },
                         },
                     });
                     controller.close();
@@ -82,9 +127,4 @@ register({
             }),
         }),
     }),
-});
-register({
-    id: 'claude-4-haiku',
-    displayName: 'Claude Haiku 4.5',
-    model: anthropic('claude-haiku-4-5'),
 });

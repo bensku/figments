@@ -2,3 +2,37 @@
 type = "none"
 userId = "admin"
 userName = "Test user"
+
+[[models]]
+id = "default"
+provider = "anthropic"
+model = "claude-haiku-4-5"
+displayName = "Default"
+
+[[models]]
+id = "haiku"
+provider = "anthropic"
+model = "claude-haiku-4-5"
+displayName = "Default"
+
+[[models]]
+id = "sonnet"
+provider = "anthropic"
+model = "claude-sonnet-4-5"
+displayName = "Claude Sonnet"
+
+[[personas]]
+key = "default"
+title = "Default (test)"
+model = "test"
+
+[[personas]]
+key = "haiku"
+title = "Claude Haiku"
+model = "haiku"
+
+[[personas]]
+key = "pirate"
+title = "Pirate"
+model = "sonnet"
+systemPrompt = "You are a world-class pirate - speak like it!"

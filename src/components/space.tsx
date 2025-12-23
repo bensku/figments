@@ -1,8 +1,6 @@
-import { any, select, upsert } from '@bensku/y-query';
 import { createContext, useContext, useEffect, useState } from 'react';
 import type * as Y from 'yjs';
 import { createHocuspocusConnection } from '@/sync/hocuspocus';
-import { DEFAULT_PERSONAS, PersonaTable } from '@/tables/persona';
 import { ConversationView } from './conversation';
 
 // biome-ignore lint/style/noNonNullAssertion: this context is never accessed outside useSpace, which throws if it is null
@@ -29,15 +27,7 @@ export const Space = ({
         const connection = createHocuspocusConnection({
             name: id,
             onSynced(doc) {
-                // Add default personas if space has none
-                const existingPersonas = select(doc, PersonaTable, any());
-                if (existingPersonas.length === 0) {
-                    for (const persona of DEFAULT_PERSONAS) {
-                        upsert(doc, PersonaTable, persona);
-                    }
-                }
-                // Only expose doc after sync to prevent creating duplicate drafts
-                setDoc(doc);
+                setDoc(doc); // Nothing to show before this is done, anyway
             },
         });
 

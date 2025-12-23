@@ -4,6 +4,7 @@ import './index.css';
 import type { User } from './auth/user';
 import { Sidebar } from './components/sidebar';
 import { Space } from './components/space';
+import { InstanceProvider } from './context/instance';
 import { UIProvider } from './context/ui';
 import { UserProvider } from './context/user';
 import { ViewProvider } from './context/view';
@@ -39,35 +40,37 @@ export const App = () => {
     }
 
     return (
-        <UIProvider>
-            <UserProvider userId={user.id} displayName={user.displayName}>
-                <ViewProvider>
-                    <div className="h-screen flex overflow-hidden">
-                        <Switch>
-                            <Route path="/space/:spaceId/node/:nodeId">
-                                {(params) => (
-                                    <SpaceRoute
-                                        spaceId={params.spaceId}
-                                        nodeId={params.nodeId}
-                                    />
-                                )}
-                            </Route>
-                            <Route path="/space/:spaceId">
-                                {(params) => (
-                                    <SpaceRoute
-                                        spaceId={params.spaceId}
-                                        nodeId={null}
-                                    />
-                                )}
-                            </Route>
-                            <Route>
-                                <SpaceRoute spaceId={null} nodeId={null} />
-                            </Route>
-                        </Switch>
-                    </div>
-                </ViewProvider>
-            </UserProvider>
-        </UIProvider>
+        <InstanceProvider>
+            <UIProvider>
+                <UserProvider userId={user.id} displayName={user.displayName}>
+                    <ViewProvider>
+                        <div className="h-screen flex overflow-hidden">
+                            <Switch>
+                                <Route path="/space/:spaceId/node/:nodeId">
+                                    {(params) => (
+                                        <SpaceRoute
+                                            spaceId={params.spaceId}
+                                            nodeId={params.nodeId}
+                                        />
+                                    )}
+                                </Route>
+                                <Route path="/space/:spaceId">
+                                    {(params) => (
+                                        <SpaceRoute
+                                            spaceId={params.spaceId}
+                                            nodeId={null}
+                                        />
+                                    )}
+                                </Route>
+                                <Route>
+                                    <SpaceRoute spaceId={null} nodeId={null} />
+                                </Route>
+                            </Switch>
+                        </div>
+                    </ViewProvider>
+                </UserProvider>
+            </UIProvider>
+        </InstanceProvider>
     );
 };
 

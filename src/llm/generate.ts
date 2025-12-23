@@ -2,9 +2,9 @@ import { getKey, type Row, update, upsert } from '@bensku/y-query';
 import { streamText } from 'ai';
 import * as Y from 'yjs';
 import { ChoiceTable, FragmentTable, NodeTable } from '@/tables/node';
-import { PersonaTable } from '@/tables/persona';
 import { loadContext } from './context';
 import { MODEL_MAP } from './model';
+import { getPersona } from './persona';
 
 type FragmentRole = Row<typeof FragmentTable>['role'];
 
@@ -13,13 +13,70 @@ export async function generateFragments(
     node: Row<typeof NodeTable>,
     role: FragmentRole,
 ) {
-    const persona = getKey(doc, PersonaTable, node.author);
+    /**
+     * Appends a fragment to currently generated node.
+     * @param data Fragment data.
+     * @returns The newly appended fragment. You can write text to it.
+     */
+    const newFragment = (data: Row<typeof FragmentTable>['data']) => {
+        const key = crypto.randomUUID();
+        upsert(doc, FragmentTable, {
+            key,
+            node: node.key,
+            role,
+            createdAt: Date.now(),
+            data,
+        });
+        return getKey(doc, FragmentTable, key);
+    };
+
+    let persona = getPersona(doc, node.author);
     if (!persona) {
-        throw new Error(`unknown persona: ${node.author}`);
+        persona = getPersona(doc, 'default');
+        if (!persona) {
+            newFragment({
+                type: 'error',
+                kind: 'internal',
+                message: 'Persona not available!',
+            });
+            console.error(
+                'Missing persona',
+                node.author,
+                'AND missing default model',
+            );
+            return;
+        } else {
+            newFragment({
+                type: 'warning',
+                message:
+                    'Persona was not available, continuing with default persona.',
+            });
+        }
     }
-    const model = MODEL_MAP.get(persona.model);
+    let model = MODEL_MAP.get(persona.model);
     if (!model) {
-        throw new Error(`unknown model: ${persona.model}`);
+        // Model unavailable; log a warning and continue
+        model = MODEL_MAP.get('default');
+        if (!model) {
+            newFragment({
+                type: 'error',
+                kind: 'internal',
+                message:
+                    'The AI model used by persona and default model are both unavailable!',
+            });
+            console.error(
+                'Missing model',
+                persona.model,
+                'AND missing default model',
+            );
+            return;
+        } else {
+            newFragment({
+                type: 'warning',
+                message:
+                    'The AI model used by persona is not available. Continuing with default model.',
+            });
+        }
     }
 
     // TODO non-main fragment handling
@@ -37,71 +94,85 @@ export async function generateFragments(
     }
     // TODO prefill (if model supports it)
 
-    const result = streamText({
-        model: model.model,
-        system,
-        messages: context,
-    });
-
-    const newFragment = (data: Row<typeof FragmentTable>['data']) => {
-        const key = crypto.randomUUID();
-        upsert(doc, FragmentTable, {
-            key,
-            node: node.key,
-            role,
-            createdAt: Date.now(),
-            data,
+    let errored = false;
+    try {
+        // And now we can actually generate
+        const result = streamText({
+            model: model.model,
+            system,
+            messages: context,
         });
-        return getKey(doc, FragmentTable, key);
-    };
 
-    let current: Row<typeof FragmentTable> | null = null;
-    for await (const part of result.fullStream) {
-        switch (part.type) {
-            case 'reasoning-start':
-                current = newFragment({
-                    type: 'thinking',
-                    text: new Y.Text(),
-                });
-                break;
-            case 'reasoning-delta':
-                if (current?.data.type === 'thinking') {
-                    current.data.text.insert(
-                        current.data.text.length,
-                        part.text.toString(),
-                    );
-                } else {
-                    throw new Error(); // Should never happen
-                }
-                break;
-            case 'reasoning-end':
-                current = null;
-                break;
-            case 'text-start':
-                current = newFragment({
-                    type: 'text',
-                    text: new Y.Text(),
-                });
-                break;
-            case 'text-delta':
-                if (current?.data.type === 'text') {
-                    current.data.text.insert(
-                        current.data.text.length,
-                        part.text.toString(),
-                    );
-                } else {
-                    throw new Error(); // Should never happen
-                }
-                break;
-            case 'text-end':
-                current = null;
-                break;
-            case 'tool-call':
-                break;
-            case 'tool-result':
-                break;
-            // TODO implement tool calls, though no need to stream those :)
+        // Stream parts and create/update fragments as needed
+        let current: Row<typeof FragmentTable> | null = null;
+        for await (const part of result.fullStream) {
+            switch (part.type) {
+                case 'reasoning-start':
+                    current = newFragment({
+                        type: 'thinking',
+                        text: new Y.Text(),
+                    });
+                    break;
+                case 'reasoning-delta':
+                    if (current?.data.type === 'thinking') {
+                        current.data.text.insert(
+                            current.data.text.length,
+                            part.text.toString(),
+                        );
+                    } else {
+                        throw new Error(); // Should never happen
+                    }
+                    break;
+                case 'reasoning-end':
+                    current = null;
+                    break;
+                case 'text-start':
+                    current = newFragment({
+                        type: 'text',
+                        text: new Y.Text(),
+                    });
+                    break;
+                case 'text-delta':
+                    if (current?.data.type === 'text') {
+                        current.data.text.insert(
+                            current.data.text.length,
+                            part.text.toString(),
+                        );
+                    } else {
+                        throw new Error(); // Should never happen
+                    }
+                    break;
+                case 'text-end':
+                    current = null;
+                    break;
+                case 'tool-call':
+                    break;
+                case 'tool-result':
+                    break;
+                case 'error':
+                    newFragment({
+                        type: 'error',
+                        kind: 'internal',
+                        message:
+                            'An internal error occurred while generating this message.',
+                    });
+                    console.warn('LLM streaming error', part.error);
+                    break;
+                case 'abort':
+                    // TODO do we need to handle this somehow?
+                    break;
+                // TODO implement tool calls, though no need to stream those :)
+            }
         }
+    } catch (e) {
+        errored = true;
+        newFragment({
+            type: 'error',
+            kind: 'internal',
+            message:
+                'An internal error occurred while generating this message.',
+        });
+        console.warn('LLM streaming crash', e);
     }
 
     // Mark LLM node as completed
@@ -110,11 +181,13 @@ export async function generateFragments(
         completed: true,
     });
 
+    // Generate pre-determined choices
+    if (!errored) {
+        generateChoices(doc, node);
+    }
+
     // Summarize node in background for card views
     generateSummary(doc, node);
-
-    // Generate pre-determined choices
-    generateChoices(doc, node);
 }
 
 async function generateSummary(doc: Y.Doc, node: Row<typeof NodeTable>) {

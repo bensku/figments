@@ -33,6 +33,14 @@ export function loadContext(
         messages.push(toMessage(node.role, fragments));
     }
 
+    // Replace empty messages with placeholder content so that e.g. Anthropic API will work
+    // Normally, empty messages should only occur due to bugs in Figments
+    for (const message of messages) {
+        if (message.content.length === 0) {
+            message.content = [{ type: 'text', text: '(empty)' }];
+        }
+    }
+
     return messages;
 }
 
@@ -75,6 +83,13 @@ function toPart(fragment: Row<typeof FragmentTable>) {
             throw new Error();
         case 'toolResult':
             throw new Error();
+        case 'error':
+        case 'warning':
+            return {
+                type: 'text',
+                text: data.message
+            };
+        default:
+            throw new Error();
     }
-    throw new Error();
 }

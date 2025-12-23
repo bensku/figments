@@ -88,6 +88,15 @@ export const FragmentTable = table(
                 type: z.literal('text'),
                 text: z.instanceof(Y.Text).meta({ syncAs: Y.Text }),
             }),
+            z.object({
+                type: z.literal('error'),
+                kind: z.enum(['internal']),
+                message: z.string(),
+            }),
+            z.object({
+                type: z.literal('warning'),
+                message: z.string(),
+            }),
         ]),
     }),
 );

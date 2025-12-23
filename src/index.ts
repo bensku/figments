@@ -1,5 +1,6 @@
 import type { ServerWebSocket } from 'bun';
 import { requireUser } from './auth/hook';
+import { CONFIG } from './config';
 import index from './index.html';
 import { hocuspocus } from './sync/server';
 import { WsAdapter } from './sync/ws-adapter';
@@ -50,6 +51,13 @@ const server = Bun.serve({
         // Allow user to query its own details so that they can be shown in frontend
         '/api/user': async (req) => {
             return Response.json(requireUser(req));
+        },
+
+        // Allow user to get list of admin-specified personas (for display purposes)
+        '/api/instance/personas': async (req) => {
+            requireUser(req);
+            // TODO allow instance admin to disable exposing system prompt etc?
+            return Response.json(CONFIG.personas);
         },
     },
 

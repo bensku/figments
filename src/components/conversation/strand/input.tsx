@@ -1,10 +1,15 @@
 import { any, eq, type Row, update, upsert } from '@bensku/y-query';
 import { useQuery, useRow } from '@bensku/y-query-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSpace } from '@/components/space';
+import { useInstance } from '@/context/instance';
 import { useAutoExpandingTextarea } from '@/hooks/useAutoExpandingTextarea';
 import { ChoiceTable, type NodeTable } from '@/tables/node';
-import { PersonaSelectionTable, PersonaTable } from '@/tables/persona';
+import {
+    type Persona,
+    PersonaSelectionTable,
+    PersonaTable,
+} from '@/tables/persona';
 import { useSendMessage } from '../hooks/useSendMessage';
 
 export function MessageInput({
@@ -31,8 +36,22 @@ export function MessageInput({
         'content',
     );
 
-    // Get all personas and user's selection
-    const allPersonas = useQuery(doc, PersonaTable, () => any(), [], 'content');
+    // Get all personas (instance + space) and user's selection
+    const { data: instance } = useInstance();
+    const instancePersonas = instance?.personas ?? [];
+    const spacePersonas = useQuery(
+        doc,
+        PersonaTable,
+        () => any(),
+        [],
+        'content',
+    );
+    const allPersonas = useMemo(() => {
+        const byKey = new Map<string, Persona>();
+        for (const p of instancePersonas) byKey.set(p.key, p);
+        for (const p of spacePersonas) byKey.set(p.key, p);
+        return [...byKey.values()];
+    }, [instancePersonas, spacePersonas]);
     const defaultPersonas = allPersonas[0] ? [allPersonas[0].key] : [];
 
     const personaSelection = useRow(
@@ -163,9 +182,9 @@ function PersonaSelector({
     personas,
     togglePersona,
 }: {
-    allPersonas: Row<typeof PersonaTable>[];
+    allPersonas: Persona[];
     enabledPersonas: string[];
-    personas: Row<typeof PersonaTable>[];
+    personas: Persona[];
     togglePersona: (id: string, enabled: boolean) => void;
 }) {
     const [isOpen, setIsOpen] = useState(false);
