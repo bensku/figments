@@ -1,0 +1,4 @@
+[auth]
+type = "none"
+userId = "admin"
+userName = "Test user"

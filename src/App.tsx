@@ -1,18 +1,46 @@
+import { useEffect, useState } from 'react';
 import { Route, Switch, useLocation } from 'wouter';
 import './index.css';
+import type { User } from './auth/user';
 import { Sidebar } from './components/sidebar';
 import { Space } from './components/space';
 import { UIProvider } from './context/ui';
 import { UserProvider } from './context/user';
 import { ViewProvider } from './context/view';
 
-// For now, use a fixed user ID - this would come from auth in a real app
-const USER_ID = 'default-user';
-
 export const App = () => {
+    const [user, setUser] = useState<User | null>(null);
+
+    useEffect(() => {
+        fetch('/api/user', { redirect: 'manual' })
+            .then((res) => {
+                // Reload on redirect (proxy login) or auth errors
+                if (
+                    res.type === 'opaqueredirect' ||
+                    res.status === 401 ||
+                    res.status === 403
+                ) {
+                    location.reload();
+                    return;
+                }
+                if (!res.ok) throw new Error('Failed to fetch user');
+                return res.json();
+            })
+            .then((data) => data && setUser(data))
+            .catch(console.error);
+    }, []);
+
+    if (!user) {
+        return (
+            <div className="h-screen flex items-center justify-center text-gray-400">
+                Loading...
+            </div>
+        );
+    }
+
     return (
         <UIProvider>
-            <UserProvider userId={USER_ID}>
+            <UserProvider userId={user.id} displayName={user.displayName}>
                 <ViewProvider>
                     <div className="h-screen flex overflow-hidden">
                         <Switch>

@@ -42,6 +42,13 @@ export const Space = ({
                 // Only expose doc after sync to prevent creating duplicate drafts
                 setDoc(document);
             },
+            onAuthenticationFailed: () => location.reload(),
+            onClose: ({ event }) => {
+                // Hocuspocus uses 4401 (Unauthorized) and 4403 (Forbidden)
+                if (event.code === 4401 || event.code === 4403) {
+                    location.reload();
+                }
+            },
         });
 
         return () => {

@@ -4,6 +4,7 @@ interface DropdownProps {
     trigger: ReactNode;
     children: ReactNode;
     align?: 'left' | 'right';
+    position?: 'bottom' | 'top';
     triggerOnContextMenu?: boolean;
 }
 
@@ -11,6 +12,7 @@ export function Dropdown({
     trigger,
     children,
     align = 'right',
+    position = 'bottom',
     triggerOnContextMenu = false,
 }: DropdownProps) {
     const [isOpen, setIsOpen] = useState(false);
@@ -74,8 +76,9 @@ export function Dropdown({
             {isOpen && (
                 <div
                     className={`
-                        absolute top-full mt-1 py-1 bg-white rounded-lg shadow-lg
+                        absolute py-1 bg-white rounded-lg shadow-lg
                         border border-gray-200 min-w-[160px] z-50 animate-scale-in
+                        ${position === 'top' ? 'bottom-full mb-1' : 'top-full mt-1'}
                         ${align === 'right' ? 'right-0' : 'left-0'}
                     `}
                 >

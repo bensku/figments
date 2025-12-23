@@ -1,4 +1,5 @@
 import type { ServerWebSocket } from 'bun';
+import { requireUser } from './auth/hook';
 import index from './index.html';
 import { hocuspocus } from './sync/server';
 import { WsAdapter } from './sync/ws-adapter';
@@ -30,7 +31,9 @@ const server = Bun.serve({
     routes: {
         '/*': index,
 
+        // Main sync API - most things use this
         '/ws': async (req, server) => {
+            requireUser(req);
             if (
                 server.upgrade(req, {
                     data: {
@@ -42,6 +45,11 @@ const server = Bun.serve({
                 return; // WS estabilished, no need to reply
             }
             return new Response('WebSocket upgrade failed', { status: 400 });
+        },
+
+        // Allow user to query its own details so that they can be shown in frontend
+        '/api/user': async (req) => {
+            return Response.json(requireUser(req));
         },
     },
 
@@ -85,6 +93,6 @@ const server = Bun.serve({
     },
 });
 
-console.log(
+console.info(
     `Server running at http://localhost:${server.port} (${isDev ? 'development' : 'production'} mode)`,
 );

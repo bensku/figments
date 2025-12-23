@@ -18,7 +18,7 @@ export const Sidebar = ({
     openSpace: string;
     onOpenSpace: (spaceId: string) => void;
 }) => {
-    const { userId, userDoc } = useUser();
+    const { displayName, userDoc } = useUser();
     const { sidebarCollapsed } = useUI();
     const [isHovered, setIsHovered] = useState(false);
 
@@ -61,7 +61,7 @@ export const Sidebar = ({
                     ) : (
                         <SidebarContent
                             doc={userDoc}
-                            userId={userId}
+                            displayName={displayName}
                             openSpace={openSpace}
                             onOpenSpace={onOpenSpace}
                             isOverlay={isOverlay}
@@ -75,13 +75,13 @@ export const Sidebar = ({
 
 function SidebarContent({
     doc,
-    userId,
+    displayName,
     openSpace,
     onOpenSpace,
     isOverlay,
 }: {
     doc: Y.Doc;
-    userId: string;
+    displayName: string;
     openSpace: string;
     onOpenSpace: (spaceId: string) => void;
     isOverlay: boolean;
@@ -324,18 +324,17 @@ function SidebarContent({
                             className="w-full p-2 rounded-lg hover:bg-gray-100 flex items-center gap-3 transition-colors"
                         >
                             <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-700">
-                                {(userId.split('-')[0] ?? userId)
-                                    .slice(0, 2)
-                                    .toUpperCase()}
+                                {displayName.slice(0, 2).toUpperCase()}
                             </div>
                             <div className="flex-1 text-left">
                                 <div className="text-sm font-medium text-gray-800 truncate">
-                                    {userId}
+                                    {displayName}
                                 </div>
                             </div>
                         </button>
                     }
                     align="left"
+                    position="top"
                 >
                     <DropdownItem onClick={() => {}}>Settings</DropdownItem>
                     <DropdownSeparator />
