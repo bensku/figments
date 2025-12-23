@@ -1,9 +1,9 @@
-import { HocuspocusProvider } from '@hocuspocus/provider';
 import { any, select, upsert } from '@bensku/y-query';
+import { HocuspocusProvider } from '@hocuspocus/provider';
 import { createContext, useContext, useEffect, useState } from 'react';
 import * as Y from 'yjs';
-import { ConversationView } from './conversation';
 import { DEFAULT_PERSONAS, PersonaTable } from '@/tables/persona';
+import { ConversationView } from './conversation';
 
 // biome-ignore lint/style/noNonNullAssertion: this context is never accessed outside useSpace, which throws if it is null
 const SpaceContext = createContext<Y.Doc>(null!);

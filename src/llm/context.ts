@@ -1,7 +1,7 @@
-import { FragmentTable, NodeTable } from '@/tables/node';
-import { and, eq, getKey, select, type Row } from '@bensku/y-query';
+import { and, eq, getKey, type Row, select } from '@bensku/y-query';
 import type { AssistantContent, ModelMessage, TextPart, UserContent } from 'ai';
 import type * as Y from 'yjs';
+import { FragmentTable, NodeTable } from '@/tables/node';
 
 export function loadContext(
     doc: Y.Doc,

@@ -1,10 +1,10 @@
 import {
-    useState,
-    useRef,
-    useCallback,
-    type ReactNode,
-    type WheelEvent,
     type MouseEvent,
+    type ReactNode,
+    useCallback,
+    useRef,
+    useState,
+    type WheelEvent,
 } from 'react';
 
 interface TreeCanvasProps {

@@ -2,14 +2,14 @@ import { any, upsert } from '@bensku/y-query';
 import { useQuery } from '@bensku/y-query-react';
 import { useEffect, useRef, useState } from 'react';
 import type * as Y from 'yjs';
-import { SpaceTable } from '@/tables/user';
-import { useUI } from '@/context/ui';
-import { useUser } from '@/context/user';
 import {
     Dropdown,
     DropdownItem,
     DropdownSeparator,
 } from '@/components/ui/Dropdown';
+import { useUI } from '@/context/ui';
+import { useUser } from '@/context/user';
+import { SpaceTable } from '@/tables/user';
 
 export const Sidebar = ({
     openSpace,

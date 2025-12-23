@@ -1,4 +1,4 @@
-import { table, type Row } from '@bensku/y-query';
+import { type Row, table } from '@bensku/y-query';
 import z from 'zod';
 
 export const PersonaTable = table(

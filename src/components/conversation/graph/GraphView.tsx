@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
-import type { TreeState, StrandState } from '../types';
+import type { StrandState, TreeState } from '../types';
 import { TreeCanvas } from './TreeCanvas';
-import { TreeNode } from './TreeNode';
 import { TreeEdge } from './TreeEdge';
+import { TreeNode } from './TreeNode';
 
 interface GraphViewProps {
     tree: TreeState;

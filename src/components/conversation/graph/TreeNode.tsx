@@ -1,5 +1,5 @@
-import type { ConversationNode } from '../types';
 import { hashStringToHue } from '@/utils/colors';
+import type { ConversationNode } from '../types';
 
 interface TreeNodeProps {
     node: ConversationNode;

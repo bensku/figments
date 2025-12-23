@@ -1,10 +1,10 @@
+import { getKey, type Row, update, upsert } from '@bensku/y-query';
+import { streamText } from 'ai';
+import * as Y from 'yjs';
 import { ChoiceTable, FragmentTable, NodeTable } from '@/tables/node';
 import { PersonaTable } from '@/tables/persona';
-import { getKey, update, upsert, type Row } from '@bensku/y-query';
-import * as Y from 'yjs';
-import { MODEL_MAP } from './model';
 import { loadContext } from './context';
-import { streamText } from 'ai';
+import { MODEL_MAP } from './model';
 
 type FragmentRole = Row<typeof FragmentTable>['role'];
 

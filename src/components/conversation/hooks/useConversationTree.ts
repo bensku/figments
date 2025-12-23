@@ -1,5 +1,5 @@
+import { eq, or } from '@bensku/y-query';
 import { useQuery } from '@bensku/y-query-react';
-import { or, eq } from '@bensku/y-query';
 import { useMemo } from 'react';
 import type * as Y from 'yjs';
 import { NodeTable } from '@/tables/node';

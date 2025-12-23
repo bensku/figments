@@ -1,7 +1,7 @@
 import type { ServerWebSocket } from 'bun';
+import index from './index.html';
 import { hocuspocus } from './sync/server';
 import { WsAdapter } from './sync/ws-adapter';
-import index from './index.html';
 
 const isDev = process.env.NODE_ENV !== 'production';
 

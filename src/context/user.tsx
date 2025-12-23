@@ -1,10 +1,10 @@
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import {
     createContext,
+    type ReactNode,
     useContext,
     useEffect,
     useState,
-    type ReactNode,
 } from 'react';
 import * as Y from 'yjs';
 
