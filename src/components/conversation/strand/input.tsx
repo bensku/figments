@@ -1,8 +1,14 @@
 import { any, eq, type Row, update, upsert } from '@bensku/y-query';
 import { useQuery, useRow } from '@bensku/y-query-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+    sourceBadgeStyles,
+    sourceLabels,
+} from '@/components/personas/constants';
+import type { PersonaSource } from '@/components/personas/persona-card';
 import { useSpace } from '@/components/space';
 import { useInstance } from '@/context/instance';
+import { useUser } from '@/context/user';
 import { useAutoExpandingTextarea } from '@/hooks/useAutoExpandingTextarea';
 import { ChoiceTable, type NodeTable } from '@/tables/node';
 import {
@@ -11,6 +17,11 @@ import {
     PersonaTable,
 } from '@/tables/persona';
 import { useSendMessage } from '../hooks/useSendMessage';
+
+interface PersonaWithSource {
+    persona: Persona;
+    source: PersonaSource;
+}
 
 export function MessageInput({
     node,
@@ -36,8 +47,9 @@ export function MessageInput({
         'content',
     );
 
-    // Get all personas (instance + space) and user's selection
+    // Get all personas (instance + space + user) and user's selection
     const { data: instance } = useInstance();
+    const { userDoc } = useUser();
     const instancePersonas = instance?.personas ?? [];
     const spacePersonas = useQuery(
         doc,
@@ -46,12 +58,48 @@ export function MessageInput({
         [],
         'content',
     );
-    const allPersonas = useMemo(() => {
-        const byKey = new Map<string, Persona>();
-        for (const p of instancePersonas) byKey.set(p.key, p);
-        for (const p of spacePersonas) byKey.set(p.key, p);
-        return [...byKey.values()];
-    }, [instancePersonas, spacePersonas]);
+    // Note: React hooks must be called unconditionally, so we query spaceDoc as
+    // fallback when userDoc is null. The result is discarded in that case.
+    // This is slightly wasteful but only happens briefly during initial load.
+    const userPersonasQuery = useQuery(
+        userDoc ?? doc,
+        PersonaTable,
+        () => any(),
+        [],
+        'content',
+    );
+    const userPersonas = userDoc ? userPersonasQuery : [];
+
+    // Build ordered list with sources (same order as editor modal, sorted alphabetically within categories)
+    const allPersonasWithSource = useMemo(() => {
+        const spacePersonaKeys = new Set(spacePersonas.map((p) => p.key));
+        const sortByTitle = (a: Persona, b: Persona) =>
+            a.title.localeCompare(b.title);
+
+        // 1. Space personas (excluding those synced from user), sorted alphabetically
+        const spaceOnly = spacePersonas
+            .filter((p) => !userPersonas.find((up) => up.key === p.key))
+            .sort(sortByTitle)
+            .map((p): PersonaWithSource => ({ persona: p, source: 'space' }));
+
+        // 2. User personas synced to space, sorted alphabetically
+        const userSynced = userPersonas
+            .filter((p) => spacePersonaKeys.has(p.key))
+            .sort(sortByTitle)
+            .map((p): PersonaWithSource => ({ persona: p, source: 'user' }));
+
+        // 3. Instance personas (keep original order)
+        const instance = instancePersonas.map(
+            (p): PersonaWithSource => ({ persona: p, source: 'instance' }),
+        );
+
+        return [...spaceOnly, ...userSynced, ...instance];
+    }, [instancePersonas, spacePersonas, userPersonas]);
+
+    const allPersonas = useMemo(
+        () => allPersonasWithSource.map((p) => p.persona),
+        [allPersonasWithSource],
+    );
     const defaultPersonas = allPersonas[0] ? [allPersonas[0].key] : [];
 
     const personaSelection = useRow(
@@ -119,7 +167,7 @@ export function MessageInput({
                     </span>
                     <span className="text-xs text-gray-400">→</span>
                     <PersonaSelector
-                        allPersonas={allPersonas}
+                        allPersonasWithSource={allPersonasWithSource}
                         enabledPersonas={enabledPersonas}
                         personas={personas}
                         togglePersona={togglePersona}
@@ -177,21 +225,33 @@ export function MessageInput({
 }
 
 function PersonaSelector({
-    allPersonas,
+    allPersonasWithSource,
     enabledPersonas,
     personas,
     togglePersona,
 }: {
-    allPersonas: Persona[];
+    allPersonasWithSource: PersonaWithSource[];
     enabledPersonas: string[];
     personas: Persona[];
     togglePersona: (id: string, enabled: boolean) => void;
 }) {
     const [isOpen, setIsOpen] = useState(false);
+    const [openUpward, setOpenUpward] = useState(false);
+    const buttonRef = useRef<HTMLButtonElement>(null);
+
+    useEffect(() => {
+        if (isOpen && buttonRef.current) {
+            const rect = buttonRef.current.getBoundingClientRect();
+            const spaceBelow = window.innerHeight - rect.bottom;
+            const dropdownHeight = 200; // Approximate max height of dropdown
+            setOpenUpward(spaceBelow < dropdownHeight);
+        }
+    }, [isOpen]);
 
     return (
         <div className="relative">
             <button
+                ref={buttonRef}
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
                 className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
@@ -228,13 +288,17 @@ function PersonaSelector({
                         onKeyDown={() => {}}
                         role="presentation"
                     />
-                    <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
-                        {allPersonas.length === 0 ? (
+                    <div
+                        className={`absolute left-0 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10 ${
+                            openUpward ? 'bottom-full mb-1' : 'top-full mt-1'
+                        }`}
+                    >
+                        {allPersonasWithSource.length === 0 ? (
                             <div className="px-3 py-2 text-sm text-gray-500">
                                 No personas available
                             </div>
                         ) : (
-                            allPersonas.map((persona) => {
+                            allPersonasWithSource.map(({ persona, source }) => {
                                 const isEnabled = enabledPersonas.includes(
                                     persona.key,
                                 );
@@ -256,8 +320,13 @@ function PersonaSelector({
                                             onChange={() => {}}
                                             className="rounded border-gray-300"
                                         />
-                                        <span className="font-medium">
+                                        <span className="font-medium truncate">
                                             {persona.title || persona.key}
+                                        </span>
+                                        <span
+                                            className={`ml-auto px-1.5 py-0.5 text-xs font-medium rounded-full ${sourceBadgeStyles[source]}`}
+                                        >
+                                            {sourceLabels[source]}
                                         </span>
                                     </button>
                                 );

@@ -13,7 +13,7 @@ displayName = "Default"
 id = "haiku"
 provider = "anthropic"
 model = "claude-haiku-4-5"
-displayName = "Default"
+displayName = "Claude Haiku"
 
 [[models]]
 id = "sonnet"

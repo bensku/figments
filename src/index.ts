@@ -59,6 +59,16 @@ const server = Bun.serve({
             // TODO allow instance admin to disable exposing system prompt etc?
             return Response.json(CONFIG.personas);
         },
+
+        '/api/instance/models': async (req) => {
+            requireUser(req);
+            return Response.json(
+                CONFIG.models.map((model) => ({
+                    id: model.id,
+                    displayName: model.displayName,
+                })),
+            );
+        },
     },
 
     websocket: {

@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type * as Y from 'yjs';
+import { useUser } from '@/context/user';
 import { createHocuspocusConnection } from '@/sync/hocuspocus';
+import { importUserPersonas } from '@/tables/persona';
 import { ConversationView } from './conversation';
 
 // biome-ignore lint/style/noNonNullAssertion: this context is never accessed outside useSpace, which throws if it is null
@@ -17,24 +19,30 @@ export const Space = ({
     initialFocusedNode,
     onFocusChange,
 }: SpaceProps) => {
+    const { userDoc } = useUser();
     const [doc, setDoc] = useState<Y.Doc>();
 
     // When we first load or when open space changes, resync Yjs Doc
     useEffect(() => {
+        if (!userDoc) return;
+
         // Clear doc while loading new space
         setDoc(undefined);
 
         const connection = createHocuspocusConnection({
             name: id,
             onSynced(doc) {
-                setDoc(doc); // Nothing to show before this is done, anyway
+                // Sync user personas to space
+                importUserPersonas(userDoc, doc);
+
+                setDoc(doc); // Nothing to show we've synced space details, anyway
             },
         });
 
         return () => connection.destroy();
-    }, [id]);
+    }, [id, userDoc]);
 
-    if (!doc) {
+    if (!userDoc || !doc) {
         return (
             <div className="h-full flex items-center justify-center text-gray-500">
                 Loading...

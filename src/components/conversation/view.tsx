@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { PersonaEditorModal } from '@/components/personas/persona-editor-modal';
 import { useSpace } from '@/components/space';
 import { useView } from '@/context/view';
 import { GraphView } from './graph/view';
@@ -64,6 +65,8 @@ export function ConversationView({
 
     const switchToStrand = () => setViewMode('strand');
 
+    const [personaEditorOpen, setPersonaEditorOpen] = useState(false);
+
     return (
         <div className="relative flex flex-col h-full bg-white">
             {/* Floating action buttons */}
@@ -97,6 +100,27 @@ export function ConversationView({
                 </button>
                 <button
                     type="button"
+                    onClick={() => setPersonaEditorOpen(true)}
+                    className="p-2 rounded-lg bg-white/80 hover:bg-gray-100 transition-colors text-gray-600 hover:text-gray-900 shadow-sm border border-gray-200"
+                    title="Personas"
+                >
+                    <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                    >
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                    </svg>
+                </button>
+                <button
+                    type="button"
                     onClick={() => {
                         /* TODO: settings */
                     }}
@@ -119,6 +143,15 @@ export function ConversationView({
                     </svg>
                 </button>
             </div>
+
+            {personaEditorOpen && (
+                <PersonaEditorModal
+                    isOpen={personaEditorOpen}
+                    onClose={() => setPersonaEditorOpen(false)}
+                    defaultView="space"
+                    spaceDoc={doc}
+                />
+            )}
 
             <div className="flex-1 overflow-hidden">
                 {viewMode === 'strand' ? (

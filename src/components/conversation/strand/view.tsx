@@ -66,9 +66,12 @@ export function StrandView({
         if (!roots || !roots[0]) {
             return (
                 <EmptyState message="Start a new conversation">
-                    <div className="w-full max-w-6xl mx-auto px-4 lg:px-8 pb-6">
-                        <div className="max-w-[calc(100%-14rem)]">
-                            <MessageInput node={null} selectNode={focusNode} />
+                    <div className="w-full px-4 lg:px-8 pb-6">
+                        <div className="mx-auto max-w-[76rem] grid grid-cols-[14rem_1fr_2rem_12rem]">
+                            <div />
+                            <div className="pr-4">
+                                <MessageInput node={null} selectNode={focusNode} />
+                            </div>
                         </div>
                     </div>
                 </EmptyState>
@@ -103,9 +106,12 @@ export function StrandView({
     if (strandNodes.length === 0 && !effectiveFocusedNode) {
         return (
             <EmptyState message="Start a new conversation">
-                <div className="w-full max-w-6xl mx-auto px-4 lg:px-8 pb-6">
-                    <div className="max-w-[calc(100%-14rem)]">
-                        <MessageInput node={null} selectNode={focusNode} />
+                <div className="w-full px-4 lg:px-8 pb-6">
+                    <div className="mx-auto max-w-[76rem] grid grid-cols-[14rem_1fr_2rem_12rem]">
+                        <div />
+                        <div className="pr-4">
+                            <MessageInput node={null} selectNode={focusNode} />
+                        </div>
                     </div>
                 </div>
             </EmptyState>

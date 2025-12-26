@@ -383,6 +383,9 @@ function UserCard({ displayName }: { displayName: string }) {
                 align="left"
                 position="top"
             >
+                {/* <DropdownItem onClick={() => setPersonaEditorOpen(true)}>
+                    Personas
+                </DropdownItem> */}
                 <DropdownItem onClick={() => {}}>Settings</DropdownItem>
                 <DropdownSeparator />
                 <DropdownItem onClick={() => {}} destructive>

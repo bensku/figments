@@ -10,8 +10,14 @@ import type { PersonaConfig } from '@/config/schema';
 
 type Persona = z.output<typeof PersonaConfig>;
 
+export interface Model {
+    id: string;
+    displayName: string;
+}
+
 interface InstanceData {
     personas: Persona[];
+    models: Model[];
 }
 
 interface InstanceContextValue {
@@ -36,8 +42,12 @@ export function InstanceProvider({ children }: InstanceProviderProps) {
                     throw new Error('Failed to fetch instance personas');
                 return res.json() as Promise<Persona[]>;
             }),
+            fetch('/api/instance/models').then((res) => {
+                if (!res.ok) throw new Error('Failed to fetch instance models');
+                return res.json() as Promise<Model[]>;
+            }),
         ])
-            .then(([personas]) => setData({ personas }))
+            .then(([personas, models]) => setData({ personas, models }))
             .catch(console.error)
             .finally(() => setLoading(false));
     }, []);

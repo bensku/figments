@@ -87,7 +87,7 @@ function toPart(fragment: Row<typeof FragmentTable>) {
         case 'warning':
             return {
                 type: 'text',
-                text: data.message
+                text: data.message,
             };
         default:
             throw new Error();

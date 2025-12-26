@@ -73,6 +73,12 @@ export const PersonaConfig = z.object({
      * content.
      */
     prefill: z.string().optional(),
+
+    /**
+     * If set and true, and this persona is defined in user database, it gets
+     * auto-imported to newly created spaces.
+     */
+    importByDefault: z.boolean().optional(),
 });
 
 export const Config = z.object({
