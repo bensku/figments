@@ -134,10 +134,19 @@ export function TreeCanvas({ children, initialCenter }: TreeCanvasProps) {
         setIsPanning(false);
     }, []);
 
-    // Reset view
+    // Reset view to center on the currently selected node
     const resetView = useCallback(() => {
-        setTransform({ x: 20, y: 20, scale: 1 });
-    }, []);
+        const svg = svgRef.current;
+
+        if (initialCenter && svg) {
+            const rect = svg.getBoundingClientRect();
+            const centerX = rect.width / 2 - initialCenter.x;
+            const centerY = rect.height / 2 - initialCenter.y;
+            setTransform({ x: centerX, y: centerY, scale: 1 });
+        } else {
+            setTransform({ x: 20, y: 20, scale: 1 });
+        }
+    }, [initialCenter]);
 
     return (
         <div className="relative w-full h-full overflow-hidden bg-gray-50">

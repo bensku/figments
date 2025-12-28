@@ -20,7 +20,7 @@ interface LayoutNode {
 }
 
 const NODE_WIDTH = 160;
-const NODE_HEIGHT = 52;
+const NODE_HEIGHT = 70;
 const HORIZONTAL_GAP = 60;
 const VERTICAL_GAP = 16;
 

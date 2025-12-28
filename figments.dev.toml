@@ -3,6 +3,9 @@ type = "none"
 userId = "admin"
 userName = "Test user"
 
+[summarizer]
+model = "default"
+
 [[models]]
 id = "default"
 provider = "anthropic"

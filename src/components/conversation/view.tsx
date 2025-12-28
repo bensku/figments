@@ -3,10 +3,10 @@ import type { SettingsTab } from '@/components/settings/modal';
 import { SettingsModal } from '@/components/settings/modal';
 import { useSpaceDoc } from '@/context/space';
 import { useView } from '@/context/view';
+import { useShortcuts } from '@/hooks/useShortcuts';
 import { GraphView } from './graph/view';
 import { useConversationTree } from './hooks/useConversationTree';
 import { StrandView } from './strand/view';
-import { useShortcuts } from '@/hooks/useShortcuts';
 
 interface ConversationViewProps {
     initialFocusedNode: string | null;
@@ -66,9 +66,12 @@ export function ConversationView({
     );
 
     // Add keyboard shortcuts
-    const shortcuts = useMemo(() => ({
-        'Control+Space': toggleViewMode
-    }), [toggleViewMode]);
+    const shortcuts = useMemo(
+        () => ({
+            'Control+Space': toggleViewMode,
+        }),
+        [toggleViewMode],
+    );
     useShortcuts(shortcuts);
 
     const [settingsOpen, setSettingsOpen] = useState(false);

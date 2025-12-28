@@ -1,6 +1,7 @@
 import { getKey, type Row, update, upsert } from '@bensku/y-query';
-import { streamText } from 'ai';
+import { generateText, streamText } from 'ai';
 import * as Y from 'yjs';
+import { CONFIG } from '@/config';
 import { ChoiceTable, FragmentTable, NodeTable } from '@/tables/node';
 import { loadContext } from './context';
 import { MODEL_MAP } from './model';
@@ -191,10 +192,31 @@ export async function generateFragments(
 }
 
 async function generateSummary(doc: Y.Doc, node: Row<typeof NodeTable>) {
-    // TODO non-stub
+    const model = MODEL_MAP.get(CONFIG.summarizer.model);
+    if (!model) {
+        console.warn(
+            'Summarizer unavailable, model',
+            CONFIG.summarizer.model,
+            'not found',
+        );
+        return;
+    }
+
+    const context = loadContext(doc, node);
+    context.push({
+        role: 'user',
+        content:
+            'Summarize the above message into a title. Few words, capitalize first only! Reply with only the title, nothing else!',
+    });
+
+    const result = await generateText({
+        model: model.model,
+        system: 'You are a message summarizer for an AI chat application.',
+        messages: context,
+    });
     update(doc, NodeTable, {
         key: node.key,
-        summary: 'Lorem ipsum',
+        summary: result.text,
     });
 }
 

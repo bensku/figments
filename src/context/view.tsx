@@ -1,4 +1,10 @@
-import { createContext, type ReactNode, useCallback, useContext, useState } from 'react';
+import {
+    createContext,
+    type ReactNode,
+    useCallback,
+    useContext,
+    useState,
+} from 'react';
 import type { ViewMode } from '@/components/conversation/types';
 
 interface ViewContextValue {

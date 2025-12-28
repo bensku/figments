@@ -83,6 +83,9 @@ export const PersonaConfig = z.object({
 
 export const Config = z.object({
     auth: AuthConfig,
+    summarizer: z.object({
+        model: z.string(),
+    }),
     /**
      * Models this instance has access to.
      */
