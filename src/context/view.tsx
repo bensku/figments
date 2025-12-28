@@ -1,4 +1,4 @@
-import { createContext, type ReactNode, useContext, useState } from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useState } from 'react';
 import type { ViewMode } from '@/components/conversation/types';
 
 interface ViewContextValue {
@@ -16,9 +16,9 @@ interface ViewProviderProps {
 export function ViewProvider({ children }: ViewProviderProps) {
     const [viewMode, setViewMode] = useState<ViewMode>('strand');
 
-    const toggleViewMode = () => {
+    const toggleViewMode = useCallback(() => {
         setViewMode((prev) => (prev === 'strand' ? 'graph' : 'strand'));
-    };
+    }, []);
 
     return (
         <ViewContext.Provider value={{ viewMode, setViewMode, toggleViewMode }}>

@@ -6,6 +6,7 @@ import { useView } from '@/context/view';
 import { GraphView } from './graph/view';
 import { useConversationTree } from './hooks/useConversationTree';
 import { StrandView } from './strand/view';
+import { useShortcuts } from '@/hooks/useShortcuts';
 
 interface ConversationViewProps {
     initialFocusedNode: string | null;
@@ -64,7 +65,11 @@ export function ConversationView({
         [onFocusChange],
     );
 
-    const switchToStrand = () => setViewMode('strand');
+    // Add keyboard shortcuts
+    const shortcuts = useMemo(() => ({
+        'Control+Space': toggleViewMode
+    }), [toggleViewMode]);
+    useShortcuts(shortcuts);
 
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [settingsDefaultTab, setSettingsDefaultTab] =
@@ -85,8 +90,8 @@ export function ConversationView({
                     className="p-2 rounded-lg bg-white/80 hover:bg-gray-100 transition-colors text-gray-600 hover:text-gray-900 shadow-sm border border-gray-200"
                     title={
                         viewMode === 'strand'
-                            ? 'Show tree'
-                            : 'Show conversation'
+                            ? 'Show tree (Ctrl+Space)'
+                            : 'Show chat (Ctrl+Space)'
                     }
                 >
                     <svg
@@ -177,7 +182,7 @@ export function ConversationView({
                             selectBranch: (_, child) => focusNode(child),
                             getSiblings: () => [],
                         }}
-                        onSwitchToStrand={switchToStrand}
+                        onSwitchToStrand={() => setViewMode('strand')}
                     />
                 )}
             </div>
