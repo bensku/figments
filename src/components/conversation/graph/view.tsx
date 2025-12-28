@@ -104,6 +104,17 @@ export function GraphView({ tree, strand, onSwitchToStrand }: GraphViewProps) {
         return result;
     }, [tree.nodes]);
 
+    // Calculate the center position of the selected node for initial centering
+    const selectedNodeCenter = useMemo(() => {
+        if (!strand.selectedLeaf) return undefined;
+        const pos = layout.get(strand.selectedLeaf);
+        if (!pos) return undefined;
+        return {
+            x: pos.x + pos.width / 2,
+            y: pos.y + pos.height / 2,
+        };
+    }, [strand.selectedLeaf, layout]);
+
     if (tree.nodes.size === 0) {
         return (
             <EmptyState
@@ -114,7 +125,7 @@ export function GraphView({ tree, strand, onSwitchToStrand }: GraphViewProps) {
     }
 
     return (
-        <TreeCanvas>
+        <TreeCanvas initialCenter={selectedNodeCenter}>
             {/* Render edges first (behind nodes) */}
             <g className="edges">
                 {edges.map(({ from, to }) => {

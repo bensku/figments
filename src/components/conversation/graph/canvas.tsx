@@ -2,6 +2,7 @@ import {
     type MouseEvent,
     type ReactNode,
     useCallback,
+    useLayoutEffect,
     useRef,
     useState,
     type WheelEvent,
@@ -9,6 +10,8 @@ import {
 
 interface TreeCanvasProps {
     children: ReactNode;
+    /** Position to center on when the canvas mounts */
+    initialCenter?: { x: number; y: number };
 }
 
 interface Transform {
@@ -24,7 +27,7 @@ const ZOOM_SENSITIVITY = 0.001;
 /**
  * SVG canvas with zoom and pan functionality.
  */
-export function TreeCanvas({ children }: TreeCanvasProps) {
+export function TreeCanvas({ children, initialCenter }: TreeCanvasProps) {
     const [transform, setTransform] = useState<Transform>({
         x: 20,
         y: 20,
@@ -33,6 +36,28 @@ export function TreeCanvas({ children }: TreeCanvasProps) {
     const [isPanning, setIsPanning] = useState(false);
     const [panStart, setPanStart] = useState({ x: 0, y: 0 });
     const svgRef = useRef<SVGSVGElement>(null);
+
+    // Store initial center in a ref so we only use the mount-time value
+    const initialCenterRef = useRef(initialCenter);
+
+    // Center on the initial position when the canvas mounts
+    useLayoutEffect(() => {
+        const center = initialCenterRef.current;
+        if (!center || !svgRef.current) return;
+
+        const svg = svgRef.current;
+        const rect = svg.getBoundingClientRect();
+
+        // Calculate transform to center the node in the viewport
+        const centerX = rect.width / 2 - center.x;
+        const centerY = rect.height / 2 - center.y;
+
+        setTransform({
+            x: centerX,
+            y: centerY,
+            scale: 1,
+        });
+    }, []);
 
     // Handle wheel zoom
     const handleWheel = useCallback(
