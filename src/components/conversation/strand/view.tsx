@@ -2,9 +2,9 @@ import { any, type Row } from '@bensku/y-query';
 import { useQuery } from '@bensku/y-query-react';
 import { useCallback, useMemo } from 'react';
 import { EmptyState } from '@/components/ui/empty-state';
+import { useSpaceDoc } from '@/context/space';
 import { NodeTable } from '@/tables/node';
 import { hashStringToHue } from '@/utils/colors';
-import { useSpace } from '../../space';
 import { MessageInput } from './input';
 import { StrandNode } from './node';
 import { TimelineAlternatives, TimelineMarker } from './timeline';
@@ -22,7 +22,7 @@ export function StrandView({
     focusNode: (id: string | null) => void;
     depth: number;
 }) {
-    const doc = useSpace();
+    const doc = useSpaceDoc();
 
     // Get ALL nodes in space and subscribe to addition/removal
     // We'll be recomputing ~everything when this occurs, but with a few hundred nodes at most it shouldn't be a problem
@@ -70,7 +70,10 @@ export function StrandView({
                         <div className="mx-auto max-w-[76rem] grid grid-cols-[14rem_1fr_2rem_12rem]">
                             <div />
                             <div className="pr-4">
-                                <MessageInput node={null} selectNode={focusNode} />
+                                <MessageInput
+                                    node={null}
+                                    selectNode={focusNode}
+                                />
                             </div>
                         </div>
                     </div>

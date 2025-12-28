@@ -12,6 +12,8 @@ interface PersonaListProps {
     spacePersonas?: Persona[];
     syncedUserPersonaKeys?: Set<string>;
     outdatedUserPersonaKeys?: Set<string>;
+    /** Whether a space is available for importing personas to */
+    hasSpace?: boolean;
     onView: (persona: Persona, source: PersonaSource) => void;
     onEdit: (persona: Persona, source: 'user' | 'space') => void;
     onDelete: (personaKey: string, source: 'user' | 'space') => void;
@@ -26,6 +28,7 @@ export function PersonaList({
     spacePersonas = [],
     syncedUserPersonaKeys = new Set(),
     outdatedUserPersonaKeys = new Set(),
+    hasSpace = true,
     onView,
     onEdit,
     onDelete,
@@ -142,9 +145,10 @@ export function PersonaList({
             {[...userPersonas].sort(sortByTitle).map((persona) => {
                 const isSynced = syncedUserPersonaKeys.has(persona.key);
                 const isOutdated = outdatedUserPersonaKeys.has(persona.key);
-                // Show import if not synced, or if outdated and no auto-sync
+                // Show import if space available and (not synced, or outdated without auto-sync)
                 const canImport =
-                    !isSynced || (isOutdated && !persona.importByDefault);
+                    hasSpace &&
+                    (!isSynced || (isOutdated && !persona.importByDefault));
                 return (
                     <PersonaCard
                         key={persona.key}
@@ -154,7 +158,7 @@ export function PersonaList({
                         onDelete={() => onDelete(persona.key, 'user')}
                         onClone={() => onClone(persona)}
                         onImport={() => onImport(persona)}
-                        isSyncedToSpace={isSynced}
+                        isSyncedToSpace={hasSpace && isSynced}
                         isOutdated={isOutdated}
                         canImport={canImport}
                     />

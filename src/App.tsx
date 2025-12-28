@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Route, Switch, useLocation } from 'wouter';
-import './index.css';
 import type { User } from './auth/user';
 import { Sidebar } from './components/sidebar';
 import { Space } from './components/space';
 import { InstanceProvider } from './context/instance';
+import { SpaceProvider } from './context/space';
 import { UIProvider } from './context/ui';
-import { UserProvider } from './context/user';
+import { UserProvider, useUser } from './context/user';
 import { ViewProvider } from './context/view';
+import './index.css';
 
 export const App = () => {
     const [user, setUser] = useState<User | null>(null);
@@ -82,6 +83,7 @@ function SpaceRoute({
     nodeId: string | null;
 }) {
     const [, navigate] = useLocation();
+    const { userDoc } = useUser();
 
     const handleOpenSpace = (newSpaceId: string) => {
         navigate(`/space/${newSpaceId}`);
@@ -97,12 +99,11 @@ function SpaceRoute({
     };
 
     return (
-        <>
+        <SpaceProvider spaceId={spaceId} userDoc={userDoc}>
             <Sidebar openSpace={spaceId ?? ''} onOpenSpace={handleOpenSpace} />
             <main className="flex-1 h-full overflow-hidden">
                 {spaceId ? (
                     <Space
-                        id={spaceId}
                         initialFocusedNode={nodeId}
                         onFocusChange={handleFocusNode}
                     />
@@ -112,7 +113,7 @@ function SpaceRoute({
                     </div>
                 )}
             </main>
-        </>
+        </SpaceProvider>
     );
 }
 

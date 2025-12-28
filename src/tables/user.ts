@@ -28,5 +28,20 @@ export const UserSettingsTable = table(
     'settings',
     z.object({
         key: z.literal('settings'),
+
+        /**
+         * Whether or not to show reply suggestions (internally known as choices).
+         */
+        showReplySuggestions: z.boolean().default(true).optional(),
+
+        /**
+         * When typing message, by default Enter adds a new line, while
+         * Ctrl+Enter sends. User can change Enter to send, in which case
+         * Shift+Enter is used to type new lines.
+         */
+        sendMessageOn: z
+            .enum(['enter', 'ctrl+enter'])
+            .default('ctrl+enter')
+            .optional(),
     }),
 );

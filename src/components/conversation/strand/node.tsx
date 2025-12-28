@@ -1,7 +1,7 @@
 import { eq } from '@bensku/y-query';
 import { useQuery, useRow } from '@bensku/y-query-react';
 import { memo, useState } from 'react';
-import { useSpace } from '@/components/space';
+import { useSpaceDoc } from '@/context/space';
 import { usePersona } from '@/hooks/usePersonas';
 import { FragmentTable, NodeTable } from '@/tables/node';
 import { hashStringToHue } from '@/utils/colors';
@@ -22,7 +22,7 @@ export const StrandNode = memo(function StrandNode({
     selectNode,
     focusNode,
 }: StrandNodeProps) {
-    const doc = useSpace();
+    const doc = useSpaceDoc();
     const node = useRow(doc, NodeTable, id, 'content');
     const persona = usePersona(node?.author);
     const [isHovered, setIsHovered] = useState(false);

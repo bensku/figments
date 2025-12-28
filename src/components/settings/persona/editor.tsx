@@ -2,16 +2,14 @@ import { any } from '@bensku/y-query';
 import { useQuery } from '@bensku/y-query-react';
 import { useEffect, useMemo, useState } from 'react';
 import type * as Y from 'yjs';
-import { Modal } from '@/components/ui/modal';
 import { Tabs } from '@/components/ui/tabs';
-import { type Model, useInstance } from '@/context/instance';
-import { useUser } from '@/context/user';
+import type { Model } from '@/context/instance';
 import { type Persona, PersonaTable } from '@/tables/persona';
 import { deepEqual } from '@/utils/equal';
+import { PersonaForm } from './editor-form';
+import { usePersonaActions } from './hooks';
 import type { PersonaSource } from './persona-card';
-import { PersonaForm } from './persona-form';
 import { PersonaList } from './persona-list';
-import { usePersonaActions } from './use-persona-actions';
 
 type ViewType = 'space' | 'user';
 type EditorState =
@@ -20,85 +18,64 @@ type EditorState =
     | { mode: 'create'; target: 'user' | 'space' }
     | { mode: 'edit'; persona: Persona; target: 'user' | 'space' };
 
-const VIEW_TABS = [
-    { id: 'space', label: 'Space' },
-    { id: 'user', label: 'User' },
-];
-
-interface PersonaEditorModalProps {
-    isOpen: boolean;
-    onClose: () => void;
+export interface PersonaEditorProps {
     defaultView?: ViewType;
-    spaceDoc?: Y.Doc;
-}
-
-export function PersonaEditorModal({
-    isOpen,
-    onClose,
-    defaultView = 'space',
-    spaceDoc,
-}: PersonaEditorModalProps) {
-    const { userDoc } = useUser();
-    const { data: instance, loading: instanceLoading } = useInstance();
-
-    const isReady = !instanceLoading && spaceDoc && userDoc;
-
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Personas" size="lg">
-            {isReady ? (
-                <PersonaEditorContent
-                    defaultView={defaultView}
-                    isOpen={isOpen}
-                    spaceDoc={spaceDoc}
-                    userDoc={userDoc}
-                    instancePersonas={instance?.personas ?? []}
-                    models={instance?.models ?? []}
-                />
-            ) : (
-                <div className="p-6 text-center text-gray-500">Loading...</div>
-            )}
-        </Modal>
-    );
-}
-
-interface PersonaEditorContentProps {
-    defaultView: ViewType;
     isOpen: boolean;
-    spaceDoc: Y.Doc;
+    spaceDoc: Y.Doc | null;
     userDoc: Y.Doc;
     instancePersonas: Persona[];
     models: Model[];
 }
 
-function PersonaEditorContent({
-    defaultView,
+export function PersonaEditor({
+    defaultView = 'user',
     isOpen,
     spaceDoc,
     userDoc,
     instancePersonas,
     models,
-}: PersonaEditorContentProps) {
-    const [activeView, setActiveView] = useState<ViewType>(defaultView);
+}: PersonaEditorProps) {
+    const hasSpace = !!spaceDoc;
+    const effectiveDefaultView = hasSpace ? defaultView : 'user';
+
+    const [activeView, setActiveView] =
+        useState<ViewType>(effectiveDefaultView);
     const [editorState, setEditorState] = useState<EditorState>({
         mode: 'list',
     });
 
+    // Build tabs based on whether space is available
+    const viewTabs = useMemo(
+        () =>
+            hasSpace
+                ? [
+                      { id: 'space', label: 'Space' },
+                      { id: 'user', label: 'User' },
+                  ]
+                : [{ id: 'user', label: 'User' }],
+        [hasSpace],
+    );
+
     // Reset to default view when modal opens
     useEffect(() => {
         if (isOpen) {
-            setActiveView(defaultView);
+            setActiveView(effectiveDefaultView);
             setEditorState({ mode: 'list' });
         }
-    }, [isOpen, defaultView]);
+    }, [isOpen, effectiveDefaultView]);
 
     // Query personas from each source
-    const spacePersonas = useQuery(
-        spaceDoc,
+    // Note: React hooks must be called unconditionally, so we query userDoc as
+    // fallback when spaceDoc is null. The result is discarded in that case.
+    const spacePersonasQuery = useQuery(
+        spaceDoc ?? userDoc,
         PersonaTable,
         () => any(),
         [],
         'content',
     );
+    const spacePersonas = spaceDoc ? spacePersonasQuery : [];
+
     const userPersonas = useQuery(
         userDoc,
         PersonaTable,
@@ -148,7 +125,8 @@ function PersonaEditorContent({
     };
 
     const handleCreate = () => {
-        const target = activeView === 'space' ? 'space' : 'user';
+        // Only create in space if space is available and in space view
+        const target = activeView === 'space' && hasSpace ? 'space' : 'user';
         setEditorState({ mode: 'create', target });
     };
 
@@ -304,7 +282,7 @@ function PersonaEditorContent({
                     <div>
                         <div className="px-4 pt-4 pb-2 flex justify-between items-center">
                             <Tabs
-                                tabs={VIEW_TABS}
+                                tabs={viewTabs}
                                 activeTab={activeView}
                                 onTabChange={handleTabChange}
                             />
@@ -336,6 +314,7 @@ function PersonaEditorContent({
                             spacePersonas={spacePersonas}
                             syncedUserPersonaKeys={syncedUserPersonaKeys}
                             outdatedUserPersonaKeys={outdatedUserPersonaKeys}
+                            hasSpace={hasSpace}
                             onView={handleView}
                             onEdit={handleEdit}
                             onDelete={handleDelete}

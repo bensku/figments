@@ -2,6 +2,7 @@ import { any, upsert } from '@bensku/y-query';
 import { useQuery } from '@bensku/y-query-react';
 import { useRef, useState } from 'react';
 import type * as Y from 'yjs';
+import { SettingsModal } from '@/components/settings/modal';
 import {
     Dropdown,
     DropdownItem,
@@ -22,6 +23,7 @@ export const Sidebar = ({
     const { displayName, userDoc } = useUser();
     const { sidebarCollapsed } = useUI();
     const [isHovered, setIsHovered] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
 
     // Show sidebar when expanded OR when collapsed but hovered
     const showSidebar = !sidebarCollapsed || isHovered;
@@ -66,9 +68,18 @@ export const Sidebar = ({
                             openSpace={openSpace}
                             onOpenSpace={onOpenSpace}
                             isOverlay={isOverlay}
+                            onOpenSettings={() => setSettingsOpen(true)}
                         />
                     )}
                 </div>
+            )}
+
+            {settingsOpen && (
+                <SettingsModal
+                    isOpen={settingsOpen}
+                    onClose={() => setSettingsOpen(false)}
+                    defaultTab="general"
+                />
             )}
         </div>
     );
@@ -80,12 +91,14 @@ function SidebarContent({
     openSpace,
     onOpenSpace,
     isOverlay,
+    onOpenSettings,
 }: {
     doc: Y.Doc;
     displayName: string;
     openSpace: string;
     onOpenSpace: (spaceId: string) => void;
     isOverlay: boolean;
+    onOpenSettings: () => void;
 }) {
     const { sidebarCollapsed, setSidebarCollapsed } = useUI();
     const spaces = useQuery(doc, SpaceTable, () => any(), [], 'content');
@@ -139,7 +152,10 @@ function SidebarContent({
                 </button>
             </div>
 
-            <UserCard displayName={displayName} />
+            <UserCard
+                displayName={displayName}
+                onOpenSettings={onOpenSettings}
+            />
         </div>
     );
 }
@@ -361,7 +377,13 @@ function CreateSpaceForm({
     );
 }
 
-function UserCard({ displayName }: { displayName: string }) {
+function UserCard({
+    displayName,
+    onOpenSettings,
+}: {
+    displayName: string;
+    onOpenSettings: () => void;
+}) {
     return (
         <div className="p-2 border-t border-gray-200">
             <Dropdown
@@ -383,12 +405,54 @@ function UserCard({ displayName }: { displayName: string }) {
                 align="left"
                 position="top"
             >
-                {/* <DropdownItem onClick={() => setPersonaEditorOpen(true)}>
-                    Personas
-                </DropdownItem> */}
-                <DropdownItem onClick={() => {}}>Settings</DropdownItem>
+                <DropdownItem
+                    onClick={onOpenSettings}
+                    icon={
+                        <svg
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            className="w-full h-full"
+                            aria-hidden="true"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={1.5}
+                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                            />
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={1.5}
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
+                        </svg>
+                    }
+                >
+                    Settings
+                </DropdownItem>
                 <DropdownSeparator />
-                <DropdownItem onClick={() => {}} destructive>
+                <DropdownItem
+                    onClick={() => {}}
+                    destructive
+                    icon={
+                        <svg
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            className="w-full h-full"
+                            aria-hidden="true"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={1.5}
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                            />
+                        </svg>
+                    }
+                >
                     Sign out
                 </DropdownItem>
             </Dropdown>

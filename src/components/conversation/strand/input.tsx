@@ -4,10 +4,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     sourceBadgeStyles,
     sourceLabels,
-} from '@/components/personas/constants';
-import type { PersonaSource } from '@/components/personas/persona-card';
-import { useSpace } from '@/components/space';
+} from '@/components/settings/persona/constants';
+import type { PersonaSource } from '@/components/settings/persona/persona-card';
 import { useInstance } from '@/context/instance';
+import { useSpaceDoc } from '@/context/space';
 import { useUser } from '@/context/user';
 import { useAutoExpandingTextarea } from '@/hooks/useAutoExpandingTextarea';
 import { ChoiceTable, type NodeTable } from '@/tables/node';
@@ -16,6 +16,7 @@ import {
     PersonaSelectionTable,
     PersonaTable,
 } from '@/tables/persona';
+import { UserSettingsTable } from '@/tables/user';
 import { useSendMessage } from '../hooks/useSendMessage';
 
 interface PersonaWithSource {
@@ -30,7 +31,7 @@ export function MessageInput({
     node: Row<typeof NodeTable> | null;
     selectNode: (id: string | null) => void;
 }) {
-    const doc = useSpace();
+    const doc = useSpaceDoc();
     const [inputText, setInputText] = useState('');
     const {
         ref: textareaRef,
@@ -50,6 +51,23 @@ export function MessageInput({
     // Get all personas (instance + space + user) and user's selection
     const { data: instance } = useInstance();
     const { userDoc } = useUser();
+
+    // Load user settings (with defaults)
+    // Note: React hooks must be called unconditionally, so we query spaceDoc as
+    // fallback when userDoc is null. The result is discarded in that case.
+    const userSettingsQuery = useRow(
+        userDoc ?? doc,
+        UserSettingsTable,
+        'settings',
+        'content',
+    );
+    const userSettings = userDoc
+        ? (userSettingsQuery ??
+          UserSettingsTable.type.parse({ key: 'settings' }))
+        : UserSettingsTable.type.parse({ key: 'settings' });
+    const sendMessageOn = userSettings.sendMessageOn ?? 'ctrl+enter';
+    const showReplySuggestions = userSettings.showReplySuggestions ?? true;
+
     const instancePersonas = instance?.personas ?? [];
     const spacePersonas = useQuery(
         doc,
@@ -147,10 +165,16 @@ export function MessageInput({
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault();
-            if (personas.length > 0) {
-                handleSend(inputText);
+        if (e.key === 'Enter') {
+            const isModified = e.ctrlKey || e.metaKey;
+            const shouldSend =
+                sendMessageOn === 'enter' ? !e.shiftKey : isModified;
+
+            if (shouldSend) {
+                e.preventDefault();
+                if (personas.length > 0) {
+                    handleSend(inputText);
+                }
             }
         }
     };
@@ -175,7 +199,7 @@ export function MessageInput({
                 </div>
 
                 {/* Choices */}
-                {choices.length > 0 && (
+                {showReplySuggestions && choices.length > 0 && (
                     <ChoiceButtons
                         choices={choices}
                         selectChoice={selectChoice}
@@ -192,7 +216,11 @@ export function MessageInput({
                             adjustHeight();
                         }}
                         onKeyDown={handleKeyDown}
-                        placeholder="Type a message... (Ctrl+Enter to send)"
+                        placeholder={
+                            sendMessageOn === 'enter'
+                                ? 'Type a message... (Enter to send)'
+                                : 'Type a message... (Ctrl+Enter to send)'
+                        }
                         className="w-full resize-none rounded-lg bg-gray-50 border-0 px-3 py-2 pr-10 text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:bg-white transition-colors"
                         rows={2}
                     />
@@ -201,7 +229,11 @@ export function MessageInput({
                         onClick={() => handleSend(inputText)}
                         disabled={!inputText.trim() || personas.length === 0}
                         className="absolute right-2 bottom-2 p-1.5 rounded-md text-blue-500 hover:bg-blue-100 disabled:text-gray-300 disabled:hover:bg-transparent transition-colors"
-                        title="Send (Ctrl+Enter)"
+                        title={
+                            sendMessageOn === 'enter'
+                                ? 'Send (Enter)'
+                                : 'Send (Ctrl+Enter)'
+                        }
                     >
                         <svg
                             className="w-5 h-5"

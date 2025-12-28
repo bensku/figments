@@ -1,8 +1,8 @@
 import { any } from '@bensku/y-query';
 import { useQuery } from '@bensku/y-query-react';
 import { useMemo } from 'react';
-import { useSpace } from '@/components/space';
 import { useInstance } from '@/context/instance';
+import { useSpaceDoc } from '@/context/space';
 import { type Persona, PersonaTable } from '@/tables/persona';
 
 /**
@@ -10,7 +10,7 @@ import { type Persona, PersonaTable } from '@/tables/persona';
  * Instance personas override space personas with the same key.
  */
 export function usePersonas(): Persona[] {
-    const doc = useSpace();
+    const doc = useSpaceDoc();
     const { data: instance } = useInstance();
     const instancePersonas = instance?.personas ?? [];
     const spacePersonas = useQuery(

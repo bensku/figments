@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { PersonaEditorModal } from '@/components/personas/persona-editor-modal';
-import { useSpace } from '@/components/space';
+import type { SettingsTab } from '@/components/settings/modal';
+import { SettingsModal } from '@/components/settings/modal';
+import { useSpaceDoc } from '@/context/space';
 import { useView } from '@/context/view';
 import { GraphView } from './graph/view';
 import { useConversationTree } from './hooks/useConversationTree';
@@ -18,7 +19,7 @@ export function ConversationView({
     initialFocusedNode,
     onFocusChange,
 }: ConversationViewProps) {
-    const doc = useSpace();
+    const doc = useSpaceDoc();
     const tree = useConversationTree(doc);
     const { viewMode, setViewMode, toggleViewMode } = useView();
 
@@ -65,7 +66,14 @@ export function ConversationView({
 
     const switchToStrand = () => setViewMode('strand');
 
-    const [personaEditorOpen, setPersonaEditorOpen] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [settingsDefaultTab, setSettingsDefaultTab] =
+        useState<SettingsTab>('general');
+
+    const openSettings = (tab: SettingsTab) => {
+        setSettingsDefaultTab(tab);
+        setSettingsOpen(true);
+    };
 
     return (
         <div className="relative flex flex-col h-full bg-white">
@@ -100,7 +108,7 @@ export function ConversationView({
                 </button>
                 <button
                     type="button"
-                    onClick={() => setPersonaEditorOpen(true)}
+                    onClick={() => openSettings('personas')}
                     className="p-2 rounded-lg bg-white/80 hover:bg-gray-100 transition-colors text-gray-600 hover:text-gray-900 shadow-sm border border-gray-200"
                     title="Personas"
                 >
@@ -121,9 +129,7 @@ export function ConversationView({
                 </button>
                 <button
                     type="button"
-                    onClick={() => {
-                        /* TODO: settings */
-                    }}
+                    onClick={() => openSettings('general')}
                     className="p-2 rounded-lg bg-white/80 hover:bg-gray-100 transition-colors text-gray-600 hover:text-gray-900 shadow-sm border border-gray-200"
                     title="Settings"
                 >
@@ -144,12 +150,11 @@ export function ConversationView({
                 </button>
             </div>
 
-            {personaEditorOpen && (
-                <PersonaEditorModal
-                    isOpen={personaEditorOpen}
-                    onClose={() => setPersonaEditorOpen(false)}
-                    defaultView="space"
-                    spaceDoc={doc}
+            {settingsOpen && (
+                <SettingsModal
+                    isOpen={settingsOpen}
+                    onClose={() => setSettingsOpen(false)}
+                    defaultTab={settingsDefaultTab}
                 />
             )}
 

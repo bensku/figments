@@ -12,7 +12,7 @@ type PersonaTarget = 'user' | 'space';
 
 interface UsePersonaActionsProps {
     userDoc: Y.Doc | null;
-    spaceDoc?: Y.Doc;
+    spaceDoc: Y.Doc | null;
 }
 
 interface PersonaActions {

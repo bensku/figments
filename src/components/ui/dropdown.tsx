@@ -76,9 +76,10 @@ export function Dropdown({
             {isOpen && (
                 <div
                     className={`
-                        absolute py-1 bg-white rounded-lg shadow-lg
-                        border border-gray-200 min-w-[160px] z-50 animate-scale-in
-                        ${position === 'top' ? 'bottom-full mb-1' : 'top-full mt-1'}
+                        absolute p-1.5 bg-white rounded-xl shadow-lg
+                        border border-gray-100 min-w-[180px] z-50
+                        ring-1 ring-black/5
+                        ${position === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'}
                         ${align === 'right' ? 'right-0' : 'left-0'}
                     `}
                 >
@@ -93,19 +94,22 @@ interface DropdownItemProps {
     onClick?: () => void;
     children: ReactNode;
     destructive?: boolean;
+    icon?: ReactNode;
 }
 
 export function DropdownItem({
     onClick,
     children,
     destructive = false,
+    icon,
 }: DropdownItemProps) {
     return (
         <button
             type="button"
             onClick={onClick}
             className={`
-                w-full text-left px-3 py-2 text-sm transition-colors
+                w-full text-left px-3 py-2 text-sm rounded-lg transition-colors
+                flex items-center gap-2.5 font-medium
                 ${
                     destructive
                         ? 'text-red-600 hover:bg-red-50'
@@ -113,11 +117,18 @@ export function DropdownItem({
                 }
             `}
         >
+            {icon && (
+                <span
+                    className={`w-4 h-4 ${destructive ? 'text-red-500' : 'text-gray-500'}`}
+                >
+                    {icon}
+                </span>
+            )}
             {children}
         </button>
     );
 }
 
 export function DropdownSeparator() {
-    return <div className="my-1 border-t border-gray-200" />;
+    return <div className="my-1.5 mx-2 border-t border-gray-100" />;
 }
