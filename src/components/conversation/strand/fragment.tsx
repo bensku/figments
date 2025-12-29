@@ -1,6 +1,8 @@
 import type { Row } from '@bensku/y-query';
 import { useState } from 'react';
 import Markdown from 'react-markdown';
+import rehypeHighlight from 'rehype-highlight';
+import remarkGfm from 'remark-gfm';
 import type { FragmentTable } from '@/tables/node';
 
 type Fragment = Row<typeof FragmentTable>;
@@ -39,8 +41,8 @@ function ThinkingFragment({ fragment }: FragmentProps<'thinking'>) {
             </button>
             {expanded && (
                 <div className="mt-2 pl-4 border-l-2 border-gray-200 text-gray-500">
-                    <div className="prose prose-sm prose-gray max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-                        <Markdown>{fragment.data.text.toString()}</Markdown>
+                    <div className="prose prose-sm prose-gray max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 prose-code:before:content-none prose-code:after:content-none">
+                        <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>{fragment.data.text.toString()}</Markdown>
                     </div>
                 </div>
             )}
@@ -50,15 +52,15 @@ function ThinkingFragment({ fragment }: FragmentProps<'thinking'>) {
 
 function TextFragment({ fragment }: FragmentProps<'text'>) {
     return (
-        <div className="prose prose-sm max-w-none break-words">
-            <Markdown>{fragment.data.text.toString()}</Markdown>
+        <div className="prose prose-gray max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 prose-headings:text-lg prose-headings:font-semibold prose-h1:text-xl prose-li:marker:text-gray-500 prose-code:before:content-none prose-code:after:content-none">
+            <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>{fragment.data.text.toString()}</Markdown>
         </div>
     );
 }
 
 function ToolCallFragment(_props: FragmentProps<'toolCall'>) {
     return (
-        <div className="border border-amber-200 bg-amber-50 rounded px-3 py-2 text-sm text-amber-700">
+        <div className="border border-amber-200 bg-amber-50 rounded px-3 py-2 text-base text-amber-700">
             <span className="font-medium">Tool Call</span>
             <span className="text-gray-400 ml-2">(details coming soon)</span>
         </div>
@@ -67,7 +69,7 @@ function ToolCallFragment(_props: FragmentProps<'toolCall'>) {
 
 function ToolResultFragment(_props: FragmentProps<'toolResult'>) {
     return (
-        <div className="border border-green-200 bg-green-50 rounded px-3 py-2 text-sm text-green-700">
+        <div className="border border-green-200 bg-green-50 rounded px-3 py-2 text-base text-green-700">
             <span className="font-medium">Tool Result</span>
             <span className="text-gray-400 ml-2">(details coming soon)</span>
         </div>
@@ -76,7 +78,7 @@ function ToolResultFragment(_props: FragmentProps<'toolResult'>) {
 
 function ErrorFragment({ fragment }: FragmentProps<'error'>) {
     return (
-        <div className="border border-red-200 bg-red-50 rounded px-3 py-2 text-sm text-red-700">
+        <div className="border border-red-200 bg-red-50 rounded px-3 py-2 text-base text-red-700">
             <span className="font-medium">Error</span>
             <span className="ml-2">{fragment.data.message}</span>
         </div>
@@ -85,7 +87,7 @@ function ErrorFragment({ fragment }: FragmentProps<'error'>) {
 
 function WarningFragment({ fragment }: FragmentProps<'warning'>) {
     return (
-        <div className="border border-yellow-200 bg-yellow-50 rounded px-3 py-2 text-sm text-yellow-700">
+        <div className="border border-yellow-200 bg-yellow-50 rounded px-3 py-2 text-base text-yellow-700">
             <span className="font-medium">Warning</span>
             <span className="ml-2">{fragment.data.message}</span>
         </div>
