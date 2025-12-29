@@ -1,5 +1,5 @@
 import type { Row } from '@bensku/y-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Markdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
@@ -14,6 +14,15 @@ interface FragmentProps<T extends FragmentData['type']> {
 
 function ThinkingFragment({ fragment }: FragmentProps<'thinking'>) {
     const [expanded, setExpanded] = useState(false);
+    const [content, setContent] = useState(fragment.data.text.toString());
+
+    useEffect(() => {
+        const observer = () => {
+            setContent(fragment.data.text.toString());
+        };
+        fragment.data.text.observe(observer);
+        return () => fragment.data.text.unobserve(observer);
+    }, [fragment.data.text]);
 
     return (
         <div className="text-sm">
@@ -42,7 +51,7 @@ function ThinkingFragment({ fragment }: FragmentProps<'thinking'>) {
             {expanded && (
                 <div className="mt-2 pl-4 border-l-2 border-gray-200 text-gray-500">
                     <div className="prose prose-sm prose-gray max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 prose-code:before:content-none prose-code:after:content-none">
-                        <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>{fragment.data.text.toString()}</Markdown>
+                        <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>{content}</Markdown>
                     </div>
                 </div>
             )}
@@ -51,9 +60,19 @@ function ThinkingFragment({ fragment }: FragmentProps<'thinking'>) {
 }
 
 function TextFragment({ fragment }: FragmentProps<'text'>) {
+    const [content, setContent] = useState(fragment.data.text.toString());
+
+    useEffect(() => {
+        const observer = () => {
+            setContent(fragment.data.text.toString());
+        };
+        fragment.data.text.observe(observer);
+        return () => fragment.data.text.unobserve(observer);
+    }, [fragment.data.text]);
+
     return (
         <div className="prose prose-gray max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 prose-headings:text-lg prose-headings:font-semibold prose-h1:text-xl prose-li:marker:text-gray-500 prose-code:before:content-none prose-code:after:content-none">
-            <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>{fragment.data.text.toString()}</Markdown>
+            <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>{content}</Markdown>
         </div>
     );
 }
