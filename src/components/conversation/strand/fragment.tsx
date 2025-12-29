@@ -51,7 +51,12 @@ function ThinkingFragment({ fragment }: FragmentProps<'thinking'>) {
             {expanded && (
                 <div className="mt-2 pl-4 border-l-2 border-gray-200 text-gray-500">
                     <div className="prose prose-sm prose-gray max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 prose-code:before:content-none prose-code:after:content-none">
-                        <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>{content}</Markdown>
+                        <Markdown
+                            remarkPlugins={[remarkGfm]}
+                            rehypePlugins={[rehypeHighlight]}
+                        >
+                            {content}
+                        </Markdown>
                     </div>
                 </div>
             )}
@@ -72,7 +77,12 @@ function TextFragment({ fragment }: FragmentProps<'text'>) {
 
     return (
         <div className="prose prose-gray max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 prose-headings:text-lg prose-headings:font-semibold prose-h1:text-xl prose-li:marker:text-gray-500 prose-code:before:content-none prose-code:after:content-none">
-            <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>{content}</Markdown>
+            <Markdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeHighlight]}
+            >
+                {content}
+            </Markdown>
         </div>
     );
 }

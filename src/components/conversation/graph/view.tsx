@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { EmptyState } from '@/components/ui/empty-state';
+import { usePersonas } from '@/hooks/usePersonas';
 import type { StrandState, TreeState } from '../types';
 import { TreeCanvas } from './canvas';
 import { TreeEdge } from './edge';
@@ -30,6 +31,14 @@ const VERTICAL_GAP = 16;
 export function GraphView({ tree, strand, onSwitchToStrand }: GraphViewProps) {
     const { path, selectNode } = strand;
     const pathSet = useMemo(() => new Set(path), [path]);
+    const personas = usePersonas();
+    const personaTitles = useMemo(() => {
+        const map = new Map<string, string>();
+        for (const p of personas) {
+            map.set(p.key, p.title);
+        }
+        return map;
+    }, [personas]);
 
     // Calculate layout using depth-first traversal
     const layout = useMemo(() => {
@@ -158,6 +167,7 @@ export function GraphView({ tree, strand, onSwitchToStrand }: GraphViewProps) {
                         <TreeNode
                             key={pos.key}
                             node={node}
+                            personaTitle={personaTitles.get(node.author)}
                             x={pos.x}
                             y={pos.y}
                             width={pos.width}

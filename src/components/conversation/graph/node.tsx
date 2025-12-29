@@ -3,6 +3,7 @@ import type { ConversationNode } from '../types';
 
 interface TreeNodeProps {
     node: ConversationNode;
+    personaTitle: string | undefined;
     x: number;
     y: number;
     width: number;
@@ -19,6 +20,7 @@ interface TreeNodeProps {
  */
 export function TreeNode({
     node,
+    personaTitle,
     x,
     y,
     width,
@@ -81,7 +83,7 @@ export function TreeNode({
                 className="font-semibold uppercase tracking-wide select-none"
                 style={{ pointerEvents: 'none' }}
             >
-                {isUser ? 'YOU' : node.author || 'LLM'}
+                {isUser ? 'YOU' : personaTitle || 'Assistant'}
             </text>
 
             {/* Summary text (2 lines, truncated) */}
