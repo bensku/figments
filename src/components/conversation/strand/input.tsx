@@ -17,7 +17,24 @@ import {
     PersonaTable,
 } from '@/tables/persona';
 import { UserSettingsTable } from '@/tables/user';
-import { useSendMessage } from '../hooks/useSendMessage';
+import { type FileAttachment, useSendMessage } from '../hooks/useSendMessage';
+
+async function uploadFile(file: File): Promise<{ id: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch('/api/attachment/upload', {
+        method: 'POST',
+        body: formData,
+    });
+    return response.json();
+}
+
+interface PendingFile {
+    file: File;
+    id?: string;
+    uploading: boolean;
+    error?: string;
+}
 
 interface PersonaWithSource {
     persona: Persona;
@@ -33,6 +50,9 @@ export function MessageInput({
 }) {
     const doc = useSpaceDoc();
     const [inputText, setInputText] = useState('');
+    const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
+    const [isDragging, setIsDragging] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const {
         ref: textareaRef,
         adjustHeight,
@@ -134,11 +154,83 @@ export function MessageInput({
 
     const sendReply = useSendMessage(doc, node, personas, selectNode);
 
-    const handleSend = (text: string) => {
-        const nodeKey = sendReply(text);
+    const addFiles = (files: FileList | File[]) => {
+        const newFiles: PendingFile[] = Array.from(files).map((file) => ({
+            file,
+            uploading: true,
+        }));
+        setPendingFiles((prev) => [...prev, ...newFiles]);
+
+        // Upload each file
+        for (const pendingFile of newFiles) {
+            uploadFile(pendingFile.file)
+                .then((result) => {
+                    setPendingFiles((prev) =>
+                        prev.map((f) =>
+                            f.file === pendingFile.file
+                                ? { ...f, id: result.id, uploading: false }
+                                : f,
+                        ),
+                    );
+                })
+                .catch(() => {
+                    setPendingFiles((prev) =>
+                        prev.map((f) =>
+                            f.file === pendingFile.file
+                                ? {
+                                      ...f,
+                                      uploading: false,
+                                      error: 'Upload failed',
+                                  }
+                                : f,
+                        ),
+                    );
+                });
+        }
+    };
+
+    const removeFile = (file: File) => {
+        setPendingFiles((prev) => prev.filter((f) => f.file !== file));
+    };
+
+    const handleSend = async (text: string) => {
+        // Wait for all uploads to complete
+        const stillUploading = pendingFiles.some((f) => f.uploading);
+        if (stillUploading) return;
+
+        const files: FileAttachment[] = pendingFiles
+            .filter(
+                (f): f is PendingFile & { id: string } => !!f.id && !f.error,
+            )
+            .map((f) => ({
+                id: f.id,
+                mediaType: f.file.type || 'application/octet-stream',
+                filename: f.file.name,
+            }));
+
+        const nodeKey = sendReply(text, files.length > 0 ? files : undefined);
         if (nodeKey) {
             setInputText('');
+            setPendingFiles([]);
             resetHeight();
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        if (e.dataTransfer.files.length > 0) {
+            addFiles(e.dataTransfer.files);
         }
     };
 
@@ -179,10 +271,26 @@ export function MessageInput({
         }
     };
 
+    const hasContent = inputText.trim() || pendingFiles.length > 0;
+    const canSend =
+        hasContent &&
+        personas.length > 0 &&
+        !pendingFiles.some((f) => f.uploading);
+
     return (
         <div className="flex gap-3">
             {/* Draft-style container */}
-            <div className="flex-1 min-w-0 py-3 px-3 rounded-lg border border-dashed border-gray-300 bg-gray-50/50">
+            {/* biome-ignore lint/a11y/noStaticElementInteractions: Drop zone for file uploads */}
+            <div
+                className={`flex-1 min-w-0 py-3 px-3 rounded-lg border border-dashed transition-colors ${
+                    isDragging
+                        ? 'border-blue-400 bg-blue-50/50'
+                        : 'border-gray-300 bg-gray-50/50'
+                }`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+            >
                 {/* Header */}
                 <div className="flex items-center gap-2 mb-3">
                     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500">
@@ -206,8 +314,88 @@ export function MessageInput({
                     />
                 )}
 
-                {/* Textarea with integrated send button */}
+                {/* Pending file previews */}
+                {pendingFiles.length > 0 && (
+                    <div className="mb-3 flex flex-wrap gap-2">
+                        {pendingFiles.map((pf, index) => (
+                            <div
+                                key={`${pf.file.name}-${index}`}
+                                className={`relative group flex items-center gap-2 px-2 py-1 rounded-md text-xs ${
+                                    pf.error
+                                        ? 'bg-red-100 text-red-700'
+                                        : pf.uploading
+                                          ? 'bg-gray-200 text-gray-500'
+                                          : 'bg-blue-100 text-blue-700'
+                                }`}
+                            >
+                                {pf.file.type.startsWith('image/') ? (
+                                    <img
+                                        src={URL.createObjectURL(pf.file)}
+                                        alt={pf.file.name}
+                                        className="w-6 h-6 object-cover rounded"
+                                    />
+                                ) : (
+                                    <svg
+                                        className="w-4 h-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                                        />
+                                    </svg>
+                                )}
+                                <span className="max-w-[100px] truncate">
+                                    {pf.file.name}
+                                </span>
+                                {pf.uploading && (
+                                    <span className="animate-pulse">...</span>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => removeFile(pf.file)}
+                                    className="ml-1 p-0.5 rounded hover:bg-black/10"
+                                    title="Remove"
+                                >
+                                    <svg
+                                        className="w-3 h-3"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M6 18L18 6M6 6l12 12"
+                                        />
+                                    </svg>
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Textarea with integrated buttons */}
                 <div className="relative">
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                            if (e.target.files) {
+                                addFiles(e.target.files);
+                                e.target.value = '';
+                            }
+                        }}
+                    />
                     <textarea
                         ref={textareaRef}
                         value={inputText}
@@ -221,35 +409,58 @@ export function MessageInput({
                                 ? 'Type a message... (Enter to send)'
                                 : 'Type a message... (Ctrl+Enter to send)'
                         }
-                        className="w-full resize-none rounded-lg bg-gray-50 border-0 px-3 py-2 pr-10 text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:bg-white transition-colors"
+                        className="w-full resize-none rounded-lg bg-gray-50 border-0 px-3 py-2 pr-20 text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:bg-white transition-colors"
                         rows={2}
                     />
-                    <button
-                        type="button"
-                        onClick={() => handleSend(inputText)}
-                        disabled={!inputText.trim() || personas.length === 0}
-                        className="absolute right-2 bottom-2 p-1.5 rounded-md text-blue-500 hover:bg-blue-100 disabled:text-gray-300 disabled:hover:bg-transparent transition-colors"
-                        title={
-                            sendMessageOn === 'enter'
-                                ? 'Send (Enter)'
-                                : 'Send (Ctrl+Enter)'
-                        }
-                    >
-                        <svg
-                            className="w-5 h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            aria-hidden="true"
+                    <div className="absolute right-2 bottom-2 flex items-center gap-1">
+                        <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-colors"
+                            title="Attach file"
                         >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                            />
-                        </svg>
-                    </button>
+                            <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                                />
+                            </svg>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleSend(inputText)}
+                            disabled={!canSend}
+                            className="p-1.5 rounded-md text-blue-500 hover:bg-blue-100 disabled:text-gray-300 disabled:hover:bg-transparent transition-colors"
+                            title={
+                                sendMessageOn === 'enter'
+                                    ? 'Send (Enter)'
+                                    : 'Send (Ctrl+Enter)'
+                            }
+                        >
+                            <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                                />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

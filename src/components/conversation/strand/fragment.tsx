@@ -123,6 +123,58 @@ function WarningFragment({ fragment }: FragmentProps<'warning'>) {
     );
 }
 
+function FileFragment({ fragment }: FragmentProps<'file'>) {
+    const isImage = fragment.data.mediaType.startsWith('image/');
+    const src = `/api/attachment/${fragment.data.attachmentId}?type=${encodeURIComponent(fragment.data.mediaType)}`;
+
+    if (isImage) {
+        return (
+            <div className="my-2">
+                <img
+                    src={src}
+                    alt={fragment.data.filename}
+                    className="max-w-full max-h-96 rounded-lg border border-gray-200"
+                />
+                <div className="mt-1 text-xs text-gray-500">
+                    {fragment.data.filename}
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 text-gray-700 text-sm">
+            <svg
+                className="w-5 h-5 text-gray-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+            >
+                <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                />
+            </svg>
+            <span
+                className="max-w-[200px] truncate"
+                title={fragment.data.filename}
+            >
+                {fragment.data.filename}
+            </span>
+            <a
+                href={src}
+                download={fragment.data.filename}
+                className="text-blue-500 hover:text-blue-700 hover:underline"
+            >
+                Download
+            </a>
+        </div>
+    );
+}
+
 type FragmentComponent = (props: { fragment: Fragment }) => React.ReactNode;
 
 const fragmentRenderers: Record<FragmentData['type'], FragmentComponent> = {
@@ -130,6 +182,7 @@ const fragmentRenderers: Record<FragmentData['type'], FragmentComponent> = {
     text: TextFragment as FragmentComponent,
     toolCall: ToolCallFragment as FragmentComponent,
     toolResult: ToolResultFragment as FragmentComponent,
+    file: FileFragment as FragmentComponent,
     error: ErrorFragment as FragmentComponent,
     warning: WarningFragment as FragmentComponent,
 };

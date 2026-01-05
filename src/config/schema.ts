@@ -20,28 +20,39 @@ export const ModelConfig = z.object({
      * Internal ID for referencing this model in Figments (e.g. in personas).
      */
     id: z.string(),
+
     /**
      * AI SDK provider to use.
      */
     provider: z.enum(['anthropic', 'openai']),
+
     /**
      * The model ID as understood by the provider.
      */
     model: z.string(),
+
     /**
      * Human-readable name shown in UI.
      */
     displayName: z.string(),
+
     /**
      * Custom base URL for the provider API.
      * Useful for proxies like LiteLLM or self-hosted endpoints.
      */
     baseUrl: z.string().optional(),
+
     /**
      * Environment variable name to read the API key from.
      * Defaults to ANTHROPIC_API_KEY or OPENAI_API_KEY based on provider.
      */
     apiKeyEnv: z.string().optional(),
+
+    /**
+     * Media types that this model can and should ingest natively
+     * Figments will try process those not included here, not necessarily successfully.
+     */
+    supportedMediaTypes: z.array(z.string()),
 });
 
 export const PersonaConfig = z.object({

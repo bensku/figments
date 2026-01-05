@@ -89,6 +89,13 @@ export const FragmentTable = table(
                 text: z.instanceof(Y.Text).meta({ syncAs: Y.Text }),
             }),
             z.object({
+                type: z.literal('file'),
+                attachmentId: z.string(),
+                mediaType: z.string(),
+                filename: z.string(),
+            }),
+            // Abnormal fragment types
+            z.object({
                 type: z.literal('error'),
                 kind: z.enum(['internal']),
                 message: z.string(),

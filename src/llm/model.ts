@@ -8,7 +8,7 @@ import type { ModelConfig } from '../config/schema';
 export interface Model {
     id: string;
     model: LanguageModel;
-    displayName: string;
+    config: ModelConfig;
 }
 
 export const MODEL_MAP: Map<string, Model> = new Map();
@@ -44,15 +44,14 @@ function createLanguageModel(config: ModelConfig): LanguageModel {
 for (const modelConfig of CONFIG.models) {
     register({
         id: modelConfig.id,
-        displayName: modelConfig.displayName,
         model: createLanguageModel(modelConfig),
+        config: modelConfig,
     });
 }
 
 // Test model for development
 register({
     id: 'test',
-    displayName: 'Test model',
     model: new MockLanguageModelV3({
         doStream: async () => ({
             stream: new ReadableStream({
@@ -127,4 +126,11 @@ register({
             }),
         }),
     }),
+    config: {
+        id: 'test',
+        displayName: 'Test',
+        model: 'figments/test',
+        provider: 'openai',
+        supportedMediaTypes: [],
+    },
 });

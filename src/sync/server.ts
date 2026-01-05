@@ -2,21 +2,11 @@ import { S3 } from '@hocuspocus/extension-s3';
 import { Hocuspocus } from '@hocuspocus/server';
 import { watchSpace } from '@/llm/watcher';
 
-const isDev = process.env.NODE_ENV !== 'production';
-
 const s3Extension = new S3({
-    bucket: process.env.S3_BUCKET || 'hocuspocus',
-    region: process.env.S3_REGION || 'us-east-1',
-    ...(isDev && {
-        endpoint: process.env.S3_ENDPOINT || 'http://localhost:4566',
-        forcePathStyle: true,
-        credentials: {
-            accessKeyId: 'test',
-            secretAccessKey: 'test',
-        },
-    }),
-    ...(!isDev &&
-        process.env.S3_ACCESS_KEY_ID &&
+    endpoint: process.env.S3_ENDPOINT,
+    forcePathStyle: process.env.S3_PATH_STYLE === 'true',
+    bucket: process.env.S3_BUCKET,
+    ...(process.env.S3_ACCESS_KEY_ID &&
         process.env.S3_SECRET_ACCESS_KEY && {
             credentials: {
                 accessKeyId: process.env.S3_ACCESS_KEY_ID,

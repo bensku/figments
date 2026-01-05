@@ -69,6 +69,61 @@ const server = Bun.serve({
                 })),
             );
         },
+
+        // Serve uploaded attachments
+        '/api/attachment/:id': async (req) => {
+            requireUser(req);
+            const id = req.params.id;
+            const file = Bun.s3.file(`uploads/${id}`);
+            if (!(await file.exists())) {
+                return new Response('Not found', { status: 404 });
+            }
+            // Get content type from query param (stored in fragment data)
+            // Only allow safe content types to prevent XSS
+            const url = new URL(req.url);
+            const requestedType = url.searchParams.get('type');
+            // Note: SVG excluded due to XSS risk (can contain JavaScript)
+            const safeTypes = [
+                'image/png',
+                'image/jpeg',
+                'image/gif',
+                'image/webp',
+                'application/pdf',
+                'audio/mpeg',
+                'audio/wav',
+                'video/mp4',
+                'video/webm',
+            ];
+            const contentType =
+                requestedType && safeTypes.includes(requestedType)
+                    ? requestedType
+                    : 'application/octet-stream';
+            // Read file content to create Response with headers
+            const content = await file.arrayBuffer();
+            return new Response(content, {
+                headers: { 'Content-Type': contentType },
+            });
+        },
+
+        // Allow attachment uploads!
+        '/api/attachment/upload': async (req) => {
+            requireUser(req);
+            const formData = await req.formData();
+            const file = formData.get('file');
+            if (!file) {
+                return Response.json(
+                    { error: 'missing file' },
+                    { status: 400 },
+                );
+            }
+
+            // Upload to S3 with random id
+            const id = crypto.randomUUID();
+            Bun.s3.write(`uploads/${id}`, file);
+
+            // Return id to caller!
+            return Response.json({ id });
+        },
     },
 
     websocket: {

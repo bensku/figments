@@ -1,13 +1,16 @@
 import { and, eq, getKey, type Row, select } from '@bensku/y-query';
-import type { AssistantContent, ModelMessage, TextPart, UserContent } from 'ai';
+import type { AssistantContent, ModelMessage, UserContent } from 'ai';
 import type * as Y from 'yjs';
 import { FragmentTable, NodeTable } from '@/tables/node';
+import { tryConvertToText as convertToText } from './attachment';
+import type { Model } from './model';
 
-export function loadContext(
+export async function loadContext(
     doc: Y.Doc,
     targetNode: Row<typeof NodeTable>,
+    model: Model,
     includeTarget = false,
-): ModelMessage[] {
+): Promise<ModelMessage[]> {
     // Get a chain of nodes from root to target
     const nodes = [];
     if (includeTarget) {
@@ -26,7 +29,7 @@ export function loadContext(
     nodes.reverse();
 
     // Convert each node into a message
-    const messages: ModelMessage[] = [];
+    const futures: Promise<ModelMessage>[] = [];
     for (const node of nodes) {
         // For now, only take the main fragments
         const fragments = select(
@@ -35,8 +38,9 @@ export function loadContext(
             and(eq('node', node.key), eq('role', 'main')),
         );
         fragments.sort((a, b) => a.createdAt - b.createdAt);
-        messages.push(toMessage(node.role, fragments));
+        futures.push(toMessage(node.role, fragments, model));
     }
+    const messages = await Promise.all(futures);
 
     // Replace empty messages with placeholder content so that e.g. Anthropic API will work
     // Normally, empty messages should only occur due to bugs in Figments
@@ -49,19 +53,18 @@ export function loadContext(
     return messages;
 }
 
-function toMessage(
+async function toMessage(
     creator: Row<typeof NodeTable>['role'],
     fragments: Row<typeof FragmentTable>[],
-): ModelMessage {
-    const parts = fragments.map(toPart);
+    model: Model,
+): Promise<ModelMessage> {
+    const parts = await Promise.all(fragments.map((f) => toPart(f, model)));
     switch (creator) {
         case 'user':
             // User messages can only have text parts
             return {
                 role: 'user',
-                content: parts.filter(
-                    (p): p is TextPart => p.type === 'text',
-                ) as UserContent,
+                content: parts as UserContent,
             };
         case 'llm':
             return {
@@ -71,7 +74,7 @@ function toMessage(
     }
 }
 
-function toPart(fragment: Row<typeof FragmentTable>) {
+async function toPart(fragment: Row<typeof FragmentTable>, model: Model) {
     const data = fragment.data;
     switch (data.type) {
         case 'text':
@@ -88,6 +91,27 @@ function toPart(fragment: Row<typeof FragmentTable>) {
             throw new Error();
         case 'toolResult':
             throw new Error();
+        case 'file': {
+            // TODO optionally use presigned URLs to avoid downloading data in memory
+            const content = Bun.s3.file(`uploads/${data.attachmentId}`);
+            if (model.config.supportedMediaTypes.includes(data.mediaType)) {
+                return {
+                    type: 'file',
+                    data: await content.arrayBuffer(),
+                    mediaType: data.mediaType,
+                };
+            } else {
+                const text = convertToText(
+                    await content.arrayBuffer(),
+                    data.mediaType,
+                    data.filename,
+                );
+                return {
+                    type: 'text',
+                    text,
+                };
+            }
+        }
         case 'error':
         case 'warning':
             return {

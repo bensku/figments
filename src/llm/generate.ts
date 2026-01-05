@@ -1,5 +1,5 @@
 import { getKey, type Row, update, upsert } from '@bensku/y-query';
-import { generateText, Output, streamText } from 'ai';
+import { generateText, type ModelMessage, Output, streamText } from 'ai';
 import * as Y from 'yjs';
 import z from 'zod';
 import { CONFIG } from '@/config';
@@ -85,7 +85,7 @@ export async function generateFragments(
 
     // Figure what we'll be feeding to the LLM
     const system = persona.systemPrompt;
-    const context = loadContext(doc, node);
+    const context = await loadContext(doc, node, model);
 
     // Patch context with persona's options
     const prompt = context[context.length - 1];
@@ -183,16 +183,25 @@ export async function generateFragments(
         completed: true,
     });
 
+    // Load context again, this time including the newly created message
+    // TODO do not load context again; can be expensive if there are attachments!
+    // FIXME if choice and summary models have different supported file types from main model, things break - badly
+    const fullContext = await loadContext(doc, node, model, true);
+
     // Generate pre-determined choices
     if (!errored) {
-        generateChoices(doc, node);
+        generateChoices(doc, node, fullContext);
     }
 
     // Summarize node in background for card views
-    generateSummary(doc, node);
+    generateSummary(doc, node, fullContext);
 }
 
-async function generateSummary(doc: Y.Doc, node: Row<typeof NodeTable>) {
+async function generateSummary(
+    doc: Y.Doc,
+    node: Row<typeof NodeTable>,
+    context: ModelMessage[],
+) {
     const model = MODEL_MAP.get(CONFIG.summarizer.model);
     if (!model) {
         console.warn(
@@ -203,7 +212,6 @@ async function generateSummary(doc: Y.Doc, node: Row<typeof NodeTable>) {
         return;
     }
 
-    const context = loadContext(doc, node, true);
     context.push({
         role: 'user',
         content:
@@ -225,7 +233,11 @@ const GeneratedChoices = z.object({
     replyOptions: z.array(z.string()),
 });
 
-async function generateChoices(doc: Y.Doc, node: Row<typeof NodeTable>) {
+async function generateChoices(
+    doc: Y.Doc,
+    node: Row<typeof NodeTable>,
+    context: ModelMessage[],
+) {
     if (!CONFIG.choices.enabled) {
         return; // Explicitly configured not to generate choices, that is ok
     }
@@ -234,13 +246,12 @@ async function generateChoices(doc: Y.Doc, node: Row<typeof NodeTable>) {
     if (!model) {
         console.warn(
             'Choice generation failed, model',
-            CONFIG.summarizer.model,
+            CONFIG.choices.model,
             'not found',
         );
         return;
     }
 
-    const context = loadContext(doc, node, true);
     context.push({
         role: 'user',
         content: `Create three reply options for the above message. One sentence per option!`,
@@ -259,7 +270,7 @@ You get to present 3 choices to the user. Write 3 most likely reply options - us
         }),
     });
 
-    // Truncate down to 3 choices if LLM decided to ignore the instructions
+    // Truncate down to 3 choices in case LLM decided to ignore the instructions
     const choices = result.output.replyOptions.slice(0, 3);
 
     // Save and make choices visible to user!
