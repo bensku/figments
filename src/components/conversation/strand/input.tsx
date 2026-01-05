@@ -182,7 +182,7 @@ export function MessageInput({
     return (
         <div className="flex gap-3">
             {/* Draft-style container */}
-            <div className="flex-1 py-3 px-3 rounded-lg border border-dashed border-gray-300 bg-gray-50/50">
+            <div className="flex-1 min-w-0 py-3 px-3 rounded-lg border border-dashed border-gray-300 bg-gray-50/50">
                 {/* Header */}
                 <div className="flex items-center gap-2 mb-3">
                     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500">
@@ -387,16 +387,18 @@ function ChoiceButtons({
                         key={choice.key}
                         type="button"
                         onClick={() => selectChoice(choice)}
-                        className={`w-full text-left px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                        className={`w-full text-left px-3 py-1.5 text-sm rounded-lg transition-colors flex items-center overflow-hidden ${
                             isTaken
                                 ? 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                                 : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
                         }`}
                     >
-                        <span className="font-medium mr-2">{index + 1}.</span>
-                        {truncateText(choice.value, 60)}
+                        <span className="font-medium mr-2 flex-shrink-0">
+                            {index + 1}.
+                        </span>
+                        <span className="truncate min-w-0">{choice.value}</span>
                         {isTaken && (
-                            <span className="ml-2 text-xs text-gray-400">
+                            <span className="ml-2 text-xs text-gray-400 flex-shrink-0">
                                 (visited)
                             </span>
                         )}
@@ -405,9 +407,4 @@ function ChoiceButtons({
             })}
         </div>
     );
-}
-
-function truncateText(text: string, maxLength: number): string {
-    if (text.length <= maxLength) return text;
-    return `${text.slice(0, maxLength - 1)}…`;
 }

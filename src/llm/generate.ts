@@ -1,6 +1,7 @@
 import { getKey, type Row, update, upsert } from '@bensku/y-query';
-import { generateText, streamText } from 'ai';
+import { generateText, Output, streamText } from 'ai';
 import * as Y from 'yjs';
+import z from 'zod';
 import { CONFIG } from '@/config';
 import { ChoiceTable, FragmentTable, NodeTable } from '@/tables/node';
 import { loadContext } from './context';
@@ -202,7 +203,7 @@ async function generateSummary(doc: Y.Doc, node: Row<typeof NodeTable>) {
         return;
     }
 
-    const context = loadContext(doc, node);
+    const context = loadContext(doc, node, true);
     context.push({
         role: 'user',
         content:
@@ -220,24 +221,54 @@ async function generateSummary(doc: Y.Doc, node: Row<typeof NodeTable>) {
     });
 }
 
+const GeneratedChoices = z.object({
+    replyOptions: z.array(z.string()),
+});
+
 async function generateChoices(doc: Y.Doc, node: Row<typeof NodeTable>) {
-    // TODO non-stub
-    upsert(doc, ChoiceTable, {
-        key: crypto.randomUUID(),
-        node: node.key,
-        ordinal: 0,
-        value: 'Foo bar baz',
+    if (!CONFIG.choices.enabled) {
+        return; // Explicitly configured not to generate choices, that is ok
+    }
+
+    const model = MODEL_MAP.get(CONFIG.choices.model ?? 'default');
+    if (!model) {
+        console.warn(
+            'Choice generation failed, model',
+            CONFIG.summarizer.model,
+            'not found',
+        );
+        return;
+    }
+
+    const context = loadContext(doc, node, true);
+    context.push({
+        role: 'user',
+        content: `Create three reply options for the above message. One sentence per option!`,
     });
-    upsert(doc, ChoiceTable, {
-        key: crypto.randomUUID(),
-        node: node.key,
-        ordinal: 1,
-        value: 'Test choice',
+
+    // Generate JSON that matches our schema
+    const result = await generateText({
+        model: model.model,
+        system: `Your task is to generate reply options for the user, who is chatting with an another AI assistant.
+
+Look at the last message sent by the assistant, and consider how the user might respond to it?
+You get to present 3 choices to the user. Write 3 most likely reply options - user can also write their own replies for rarer cases.`,
+        messages: context,
+        output: Output.object({
+            schema: GeneratedChoices,
+        }),
     });
-    upsert(doc, ChoiceTable, {
-        key: crypto.randomUUID(),
-        node: node.key,
-        ordinal: 2,
-        value: 'Hello, world!',
+
+    // Truncate down to 3 choices if LLM decided to ignore the instructions
+    const choices = result.output.replyOptions.slice(0, 3);
+
+    // Save and make choices visible to user!
+    choices.forEach((choice, i) => {
+        upsert(doc, ChoiceTable, {
+            key: crypto.randomUUID(),
+            node: node.key,
+            ordinal: i,
+            value: choice,
+        });
     });
 }

@@ -6,9 +6,14 @@ import { FragmentTable, NodeTable } from '@/tables/node';
 export function loadContext(
     doc: Y.Doc,
     targetNode: Row<typeof NodeTable>,
+    includeTarget = false,
 ): ModelMessage[] {
     // Get a chain of nodes from root to target
     const nodes = [];
+    if (includeTarget) {
+        nodes.push(targetNode);
+    }
+
     let node = targetNode;
     for (;;) {
         const parent = getKey(doc, NodeTable, node.parentId);

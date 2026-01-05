@@ -6,6 +6,10 @@ userName = "Test user"
 [summarizer]
 model = "default"
 
+[choices]
+enabled = true
+model = "default"
+
 [[models]]
 id = "default"
 provider = "anthropic"
@@ -26,7 +30,12 @@ displayName = "Claude Sonnet"
 
 [[personas]]
 key = "default"
-title = "Default (test)"
+title = "Default"
+model = "default"
+
+[[personas]]
+key = "test"
+title = "Test model"
 model = "test"
 
 [[personas]]

@@ -86,6 +86,10 @@ export const Config = z.object({
     summarizer: z.object({
         model: z.string(),
     }),
+    choices: z.object({
+        enabled: z.boolean(),
+        model: z.string().optional(),
+    }),
     /**
      * Models this instance has access to.
      */
