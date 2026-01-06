@@ -66,6 +66,7 @@ const server = Bun.serve({
                 CONFIG.models.map((model) => ({
                     id: model.id,
                     displayName: model.displayName,
+                    features: model.features,
                 })),
             );
         },

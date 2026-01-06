@@ -4,7 +4,13 @@ import * as Y from 'yjs';
 import z from 'zod';
 import { CONFIG } from '@/config';
 import { ChoiceTable, FragmentTable, NodeTable } from '@/tables/node';
+import {
+    type Citation,
+    extractDocumentCitation,
+    extractRawCitation,
+} from './citation';
 import { loadContext } from './context';
+import { featuresToProviderOptions, featuresToTools } from './feature';
 import { MODEL_MAP } from './model';
 import { getPersona } from './persona';
 
@@ -103,10 +109,22 @@ export async function generateFragments(
             model: model.model,
             system,
             messages: context,
+            // Convert features that are implemented as tools to AI SDK's tools
+            tools: featuresToTools(model.config.provider, persona.features),
+            // Do same for features implemented with provider-specific API options
+            providerOptions: featuresToProviderOptions(
+                model.config.provider,
+                persona.features,
+            ),
+            // Enable raw chunks to access web search citations (AI SDK filters them out)
+            includeRawChunks: true,
         });
 
         // Stream parts and create/update fragments as needed
         let current: Row<typeof FragmentTable> | null = null;
+        // Track citations for current text block (source events arrive before text-end)
+        let currentBlockCitations: Citation[] = [];
+
         for await (const part of result.fullStream) {
             switch (part.type) {
                 case 'reasoning-start':
@@ -129,6 +147,7 @@ export async function generateFragments(
                     current = null;
                     break;
                 case 'text-start':
+                    currentBlockCitations = []; // Reset for new text block
                     current = newFragment({
                         type: 'text',
                         text: new Y.Text(),
@@ -145,12 +164,65 @@ export async function generateFragments(
                     }
                     break;
                 case 'text-end':
+                    // Attach collected citations to the fragment if any
+                    if (
+                        current?.data.type === 'text' &&
+                        currentBlockCitations.length > 0
+                    ) {
+                        update(doc, FragmentTable, {
+                            key: current.key,
+                            data: {
+                                ...current.data,
+                                citations: currentBlockCitations,
+                            },
+                        });
+                    }
                     current = null;
+                    currentBlockCitations = [];
                     break;
                 case 'tool-call':
+                    newFragment({
+                        type: 'toolCall',
+                        callId: part.toolCallId,
+                        toolName: part.toolName,
+                        input: part.input,
+                    });
                     break;
                 case 'tool-result':
+                    newFragment({
+                        type: 'toolResult',
+                        callId: part.toolCallId,
+                        toolName: part.toolName,
+                        output: part.output,
+                    });
                     break;
+                case 'source': {
+                    // Document citations (page_location, char_location) come through here
+                    // These have better metadata than raw events, so we use these
+                    const docCitation = extractDocumentCitation(
+                        model.config.provider,
+                        part,
+                    );
+                    if (docCitation) {
+                        currentBlockCitations.push(docCitation);
+                    }
+                    break;
+                }
+                case 'raw': {
+                    // Web search citations are filtered by AI SDK, so we extract from raw
+                    // Document citations come through 'source' events, skip them here
+                    const rawCitation = extractRawCitation(
+                        model.config.provider,
+                        part.rawValue,
+                    );
+                    if (
+                        rawCitation &&
+                        rawCitation.type === 'web_search_result_location'
+                    ) {
+                        currentBlockCitations.push(rawCitation);
+                    }
+                    break;
+                }
                 case 'error':
                     newFragment({
                         type: 'error',

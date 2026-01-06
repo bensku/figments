@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Select } from '@/components/ui/select';
+import type { FeatureConfig } from '@/config/schema';
 import type { Model } from '@/context/instance';
 import { useAutoExpandingTextarea } from '@/hooks/useAutoExpandingTextarea';
 import { useAutoFocus } from '@/hooks/useAutoFocus';
@@ -38,6 +39,9 @@ export function PersonaForm({
     const [importByDefault, setImportByDefault] = useState(
         persona?.importByDefault ?? false,
     );
+    const [features, setFeatures] = useState<FeatureConfig[]>(
+        persona?.features ?? [],
+    );
 
     // Reset form state when persona changes (e.g., navigating between personas)
     // We intentionally only depend on persona?.key to reset when switching personas,
@@ -50,7 +54,50 @@ export function PersonaForm({
         setPromptSuffix(persona?.promptSuffix ?? '');
         setPrefill(persona?.prefill ?? '');
         setImportByDefault(persona?.importByDefault ?? false);
+        setFeatures(persona?.features ?? []);
     }, [persona?.key]);
+
+    // Get available features for the selected model
+    const selectedModel = useMemo(
+        () => models.find((m) => m.id === model),
+        [models, model],
+    );
+    const availableFeatures = selectedModel?.features ?? [];
+
+    const isFeatureEnabled = (featureName: string) =>
+        features.some((f) => f.feature === featureName);
+
+    const getEffortLevel = () => {
+        const effort = features.find((f) => f.feature === 'effort');
+        return effort?.feature === 'effort' ? effort.level : 'medium';
+    };
+
+    const toggleFeature = (featureName: string) => {
+        if (isFeatureEnabled(featureName)) {
+            setFeatures(features.filter((f) => f.feature !== featureName));
+        } else {
+            if (featureName === 'thinking') {
+                setFeatures([...features, { feature: 'thinking' }]);
+            } else if (featureName === 'effort') {
+                setFeatures([
+                    ...features,
+                    { feature: 'effort', level: 'medium' },
+                ]);
+            } else if (featureName === 'webSearch') {
+                setFeatures([...features, { feature: 'webSearch' }]);
+            } else if (featureName === 'webFetch') {
+                setFeatures([...features, { feature: 'webFetch' }]);
+            }
+        }
+    };
+
+    const setEffortLevel = (level: 'low' | 'medium' | 'high' | 'xhigh') => {
+        setFeatures(
+            features.map((f) =>
+                f.feature === 'effort' ? { feature: 'effort', level } : f,
+            ),
+        );
+    };
 
     const titleInputRef = useRef<HTMLInputElement>(null);
     useAutoFocus(mode === 'create', titleInputRef);
@@ -76,6 +123,7 @@ export function PersonaForm({
             promptSuffix: promptSuffix.trim() || undefined,
             prefill: prefill.trim() || undefined,
             importByDefault: showImportByDefault ? importByDefault : undefined,
+            features,
         };
 
         onSave?.(newPersona);
@@ -216,6 +264,116 @@ export function PersonaForm({
                     >
                         Auto-sync to new spaces
                     </label>
+                </div>
+            )}
+
+            {availableFeatures.length > 0 && (
+                <div>
+                    <span className="block text-sm font-medium text-gray-700 mb-2">
+                        Features
+                    </span>
+                    <div className="space-y-3">
+                        {availableFeatures.includes('thinking') && (
+                            <div className="flex items-center gap-2">
+                                <input
+                                    id="feature-thinking"
+                                    type="checkbox"
+                                    checked={isFeatureEnabled('thinking')}
+                                    onChange={() => toggleFeature('thinking')}
+                                    disabled={isReadOnly}
+                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                />
+                                <label
+                                    htmlFor="feature-thinking"
+                                    className="text-sm text-gray-700"
+                                >
+                                    Extended thinking
+                                </label>
+                            </div>
+                        )}
+                        {availableFeatures.includes('effort') && (
+                            <div className="flex items-center gap-3">
+                                <input
+                                    id="feature-effort"
+                                    type="checkbox"
+                                    checked={isFeatureEnabled('effort')}
+                                    onChange={() => toggleFeature('effort')}
+                                    disabled={isReadOnly}
+                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                />
+                                <label
+                                    htmlFor="feature-effort"
+                                    className="text-sm text-gray-700"
+                                >
+                                    Effort
+                                </label>
+                                {isFeatureEnabled('effort') && (
+                                    <Select
+                                        id="effort-level"
+                                        options={[
+                                            { value: 'low', label: 'Low' },
+                                            {
+                                                value: 'medium',
+                                                label: 'Medium',
+                                            },
+                                            { value: 'high', label: 'High' },
+                                            {
+                                                value: 'xhigh',
+                                                label: 'Extra High',
+                                            },
+                                        ]}
+                                        value={getEffortLevel()}
+                                        onChange={(v) =>
+                                            setEffortLevel(
+                                                v as
+                                                    | 'low'
+                                                    | 'medium'
+                                                    | 'high'
+                                                    | 'xhigh',
+                                            )
+                                        }
+                                        disabled={isReadOnly}
+                                    />
+                                )}
+                            </div>
+                        )}
+                        {availableFeatures.includes('webSearch') && (
+                            <div className="flex items-center gap-2">
+                                <input
+                                    id="feature-webSearch"
+                                    type="checkbox"
+                                    checked={isFeatureEnabled('webSearch')}
+                                    onChange={() => toggleFeature('webSearch')}
+                                    disabled={isReadOnly}
+                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                />
+                                <label
+                                    htmlFor="feature-webSearch"
+                                    className="text-sm text-gray-700"
+                                >
+                                    Web search
+                                </label>
+                            </div>
+                        )}
+                        {availableFeatures.includes('webFetch') && (
+                            <div className="flex items-center gap-2">
+                                <input
+                                    id="feature-webFetch"
+                                    type="checkbox"
+                                    checked={isFeatureEnabled('webFetch')}
+                                    onChange={() => toggleFeature('webFetch')}
+                                    disabled={isReadOnly}
+                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                />
+                                <label
+                                    htmlFor="feature-webFetch"
+                                    className="text-sm text-gray-700"
+                                >
+                                    Web fetch
+                                </label>
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
 

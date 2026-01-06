@@ -1,4 +1,9 @@
-const TEXT_FILES = new Set(['text/plain', 'text/markdown', 'application/json', 'application/x-shellscript']);
+const TEXT_FILES = new Set([
+    'text/plain',
+    'text/markdown',
+    'application/json',
+    'application/x-shellscript',
+]);
 
 export function tryConvertToText(
     data: ArrayBuffer,

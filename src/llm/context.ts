@@ -58,10 +58,15 @@ async function toMessage(
     fragments: Row<typeof FragmentTable>[],
     model: Model,
 ): Promise<ModelMessage> {
-    const parts = await Promise.all(fragments.map((f) => toPart(f, model)));
+    const allParts = await Promise.all(fragments.map((f) => toPart(f, model)));
+    // Filter out tool calls and tool results - they were already consumed
+    // during the original generation; the text response is what matters
+    const parts = allParts.filter(
+        (p) => p.type !== 'tool-call' && p.type !== 'tool-result',
+    );
+
     switch (creator) {
         case 'user':
-            // User messages can only have text parts
             return {
                 role: 'user',
                 content: parts as UserContent,
@@ -88,9 +93,19 @@ async function toPart(fragment: Row<typeof FragmentTable>, model: Model) {
                 text: data.text.toString(),
             };
         case 'toolCall':
-            throw new Error();
+            return {
+                type: 'tool-call',
+                toolCallId: data.callId,
+                toolName: data.toolName,
+                input: data.input,
+            };
         case 'toolResult':
-            throw new Error();
+            return {
+                type: 'tool-result',
+                toolCallId: data.callId,
+                toolName: data.toolName,
+                output: data.output,
+            };
         case 'file': {
             // TODO optionally use presigned URLs to avoid downloading data in memory
             const content = Bun.s3.file(`uploads/${data.attachmentId}`);
@@ -99,6 +114,14 @@ async function toPart(fragment: Row<typeof FragmentTable>, model: Model) {
                     type: 'file',
                     data: await content.arrayBuffer(),
                     mediaType: data.mediaType,
+                    filename: data.filename,
+                    // Enable citations for documents (PDFs)
+                    providerOptions: {
+                        anthropic: {
+                            citations: { enabled: true },
+                            title: data.filename,
+                        },
+                    },
                 };
             } else {
                 const text = convertToText(

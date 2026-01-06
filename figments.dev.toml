@@ -16,6 +16,7 @@ provider = "anthropic"
 model = "claude-haiku-4-5"
 displayName = "Default"
 supportedMediaTypes = [ "image/png", "image/jpeg", "image/webp", "application/pdf" ]
+features = [ "thinking", "webSearch", "webFetch" ]
 
 [[models]]
 id = "haiku"
@@ -23,6 +24,7 @@ provider = "anthropic"
 model = "claude-haiku-4-5"
 displayName = "Claude Haiku"
 supportedMediaTypes = [ "image/png", "image/jpeg", "image/webp", "application/pdf" ]
+features = [ "thinking" ]
 
 [[models]]
 id = "sonnet"
@@ -30,24 +32,50 @@ provider = "anthropic"
 model = "claude-sonnet-4-5"
 displayName = "Claude Sonnet"
 supportedMediaTypes = [ "image/png", "image/jpeg", "image/webp", "application/pdf" ]
+features = [ "thinking", "webSearch", "webFetch" ]
+
+[[models]]
+id = "opus"
+provider = "anthropic"
+model = "claude-opus-4-5"
+displayName = "Claude Opus"
+supportedMediaTypes = [ "image/png", "image/jpeg", "image/webp", "application/pdf" ]
+features = [ "thinking", "effort", "webSearch", "webFetch" ]
 
 [[personas]]
 key = "default"
 title = "Default"
 model = "default"
+features = [
+    { feature = "thinking" },
+]
 
 [[personas]]
 key = "test"
 title = "Test model"
 model = "test"
+features = []
 
 [[personas]]
 key = "haiku"
 title = "Claude Haiku"
 model = "haiku"
+features = []
 
 [[personas]]
 key = "pirate"
 title = "Pirate"
 model = "sonnet"
 systemPrompt = "You are a world-class pirate - speak like it!"
+features = []
+
+[[personas]]
+key = "opus"
+title = "Claude Opus"
+model = "opus"
+features = [
+    { feature = "thinking" },
+    { feature = "effort", level = "high" },
+    { feature = "webSearch" },
+    { feature = "webFetch" }
+]

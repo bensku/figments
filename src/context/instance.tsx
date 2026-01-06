@@ -6,13 +6,14 @@ import {
     useState,
 } from 'react';
 import type z from 'zod';
-import type { PersonaConfig } from '@/config/schema';
+import type { ModelFeature, PersonaConfig } from '@/config/schema';
 
 type Persona = z.output<typeof PersonaConfig>;
 
 export interface Model {
     id: string;
     displayName: string;
+    features: z.output<typeof ModelFeature>[];
 }
 
 interface InstanceData {

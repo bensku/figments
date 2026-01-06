@@ -15,6 +15,14 @@ export const AuthConfig = z.discriminatedUnion('type', [
     }),
 ]);
 
+export const ModelProvider = z.enum(['anthropic', 'openai']);
+export const ModelFeature = z.enum([
+    'thinking',
+    'effort',
+    'webSearch',
+    'webFetch',
+]);
+
 export const ModelConfig = z.object({
     /**
      * Internal ID for referencing this model in Figments (e.g. in personas).
@@ -24,7 +32,7 @@ export const ModelConfig = z.object({
     /**
      * AI SDK provider to use.
      */
-    provider: z.enum(['anthropic', 'openai']),
+    provider: ModelProvider,
 
     /**
      * The model ID as understood by the provider.
@@ -53,7 +61,28 @@ export const ModelConfig = z.object({
      * Figments will try process those not included here, not necessarily successfully.
      */
     supportedMediaTypes: z.array(z.string()),
+
+    /**
+     * Features supported by and enabled for this model.
+     */
+    features: z.array(ModelFeature),
 });
+
+export const FeatureConfig = z.discriminatedUnion('feature', [
+    z.object({
+        feature: z.literal('thinking'),
+    }),
+    z.object({
+        feature: z.literal('effort'),
+        level: z.enum(['low', 'medium', 'high', 'xhigh']),
+    }),
+    z.object({
+        feature: z.literal('webSearch'),
+    }),
+    z.object({
+        feature: z.literal('webFetch'),
+    }),
+]);
 
 export const PersonaConfig = z.object({
     key: z.string(),
@@ -90,6 +119,11 @@ export const PersonaConfig = z.object({
      * auto-imported to newly created spaces.
      */
     importByDefault: z.boolean().optional(),
+
+    /**
+     * Configurations for model features that this persona enables.
+     */
+    features: z.array(FeatureConfig),
 });
 
 export const Config = z.object({
@@ -113,3 +147,4 @@ export const Config = z.object({
 
 export type Config = z.output<typeof Config>;
 export type ModelConfig = z.output<typeof ModelConfig>;
+export type FeatureConfig = z.output<typeof FeatureConfig>;

@@ -48,6 +48,26 @@ export const NodeTable = table(
 );
 
 /**
+ * Citation from a source (web search result, document, etc.)
+ */
+const Citation = z.object({
+    type: z.enum([
+        'web_search_result_location',
+        'char_location',
+        'page_location',
+    ]),
+    url: z.string().optional(),
+    title: z.string().optional(),
+    citedText: z.string().optional(),
+    // PDF citations (page_location)
+    startPageNumber: z.number().optional(),
+    endPageNumber: z.number().optional(),
+    // Plain text citations (char_location)
+    startCharIndex: z.number().optional(),
+    endCharIndex: z.number().optional(),
+});
+
+/**
  * Part of a node in chat tree. Nodes themself do not have content, it
  * is attached to them through use of fragments.
  */
@@ -78,15 +98,20 @@ export const FragmentTable = table(
             }),
             z.object({
                 type: z.literal('toolCall'),
-                // TODO
+                callId: z.string(),
+                toolName: z.string(),
+                input: z.any(),
             }),
             z.object({
                 type: z.literal('toolResult'),
-                // TODO
+                callId: z.string(),
+                toolName: z.string(),
+                output: z.any(),
             }),
             z.object({
                 type: z.literal('text'),
                 text: z.instanceof(Y.Text).meta({ syncAs: Y.Text }),
+                citations: z.array(Citation).optional(),
             }),
             z.object({
                 type: z.literal('file'),

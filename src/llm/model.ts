@@ -132,5 +132,6 @@ register({
         model: 'figments/test',
         provider: 'openai',
         supportedMediaTypes: [],
+        features: [],
     },
 });
