@@ -173,7 +173,7 @@ export function PersonaCard({
                         onClick={onClone}
                         className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                         title="Clone"
-                        aria-label="Clone persona"
+                        aria-label="Clone preset"
                     >
                         <svg
                             width="16"

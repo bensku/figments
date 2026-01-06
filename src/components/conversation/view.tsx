@@ -118,7 +118,7 @@ export function ConversationView({
                     type="button"
                     onClick={() => openSettings('personas')}
                     className="p-2 rounded-lg bg-white/80 hover:bg-gray-100 transition-colors text-gray-600 hover:text-gray-900 shadow-sm border border-gray-200"
-                    title="Personas"
+                    title="Presets"
                 >
                     <svg
                         width="18"

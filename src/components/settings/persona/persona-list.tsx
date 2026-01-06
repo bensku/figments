@@ -67,11 +67,11 @@ export function PersonaList({
                 </svg>
                 <p className="text-sm">
                     {view === 'space'
-                        ? 'No personas in this space'
-                        : 'No user personas yet'}
+                        ? 'No presets in this space'
+                        : 'No user presets yet'}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                    Create a new persona to get started
+                    Create a new preset to get started
                 </p>
             </div>
         );

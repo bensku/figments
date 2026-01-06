@@ -39,7 +39,7 @@ export async function generateFragments(
             newFragment({
                 type: 'error',
                 kind: 'internal',
-                message: 'Persona not available!',
+                message: 'Preset not available!',
             });
             console.error(
                 'Missing persona',
@@ -51,7 +51,7 @@ export async function generateFragments(
             newFragment({
                 type: 'warning',
                 message:
-                    'Persona was not available, continuing with default persona.',
+                    'Preset was not available, continuing with default preset.',
             });
         }
     }
@@ -64,7 +64,7 @@ export async function generateFragments(
                 type: 'error',
                 kind: 'internal',
                 message:
-                    'The AI model used by persona and default model are both unavailable!',
+                    'The AI model used by preset and default model are both unavailable!',
             });
             console.error(
                 'Missing model',
@@ -76,7 +76,7 @@ export async function generateFragments(
             newFragment({
                 type: 'warning',
                 message:
-                    'The AI model used by persona is not available. Continuing with default model.',
+                    'The AI model used by preset is not available. Continuing with default model.',
             });
         }
     }

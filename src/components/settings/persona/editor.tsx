@@ -184,7 +184,7 @@ export function PersonaEditor({
                                 </svg>
                             </button>
                             <span className="text-sm font-medium text-gray-700">
-                                View Persona
+                                View Preset
                             </span>
                         </div>
                         <PersonaForm
@@ -225,7 +225,7 @@ export function PersonaEditor({
                                 {editorState.target === 'user'
                                     ? 'User'
                                     : 'Space'}{' '}
-                                Persona
+                                Preset
                             </span>
                         </div>
                         <PersonaForm
@@ -263,7 +263,7 @@ export function PersonaEditor({
                                 </svg>
                             </button>
                             <span className="text-sm font-medium text-gray-700">
-                                Edit Persona
+                                Edit Preset
                             </span>
                         </div>
                         <PersonaForm

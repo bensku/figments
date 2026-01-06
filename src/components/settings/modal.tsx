@@ -72,7 +72,7 @@ interface SettingsSidebarProps {
 
 const TABS: Array<{ id: SettingsTab; label: string }> = [
     { id: 'general', label: 'General' },
-    { id: 'personas', label: 'Personas' },
+    { id: 'personas', label: 'Presets' },
 ];
 
 function SettingsSidebar({ activeTab, onTabChange }: SettingsSidebarProps) {
