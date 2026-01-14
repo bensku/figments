@@ -1,5 +1,12 @@
 import { any, eq, type Row, update, upsert } from '@bensku/y-query';
 import { useQuery, useRow } from '@bensku/y-query-react';
+import {
+    ChevronDown,
+    File as FileIcon,
+    Paperclip,
+    Send,
+    X,
+} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     sourceBadgeStyles,
@@ -335,20 +342,10 @@ export function MessageInput({
                                         className="w-6 h-6 object-cover rounded"
                                     />
                                 ) : (
-                                    <svg
+                                    <FileIcon
                                         className="w-4 h-4"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
                                         aria-hidden="true"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                                        />
-                                    </svg>
+                                    />
                                 )}
                                 <span className="max-w-[100px] truncate">
                                     {pf.file.name}
@@ -362,20 +359,7 @@ export function MessageInput({
                                     className="ml-1 p-0.5 rounded hover:bg-black/10"
                                     title="Remove"
                                 >
-                                    <svg
-                                        className="w-3 h-3"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                        aria-hidden="true"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M6 18L18 6M6 6l12 12"
-                                        />
-                                    </svg>
+                                    <X className="w-3 h-3" aria-hidden="true" />
                                 </button>
                             </div>
                         ))}
@@ -419,20 +403,7 @@ export function MessageInput({
                             className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-colors"
                             title="Attach file"
                         >
-                            <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                aria-hidden="true"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-                                />
-                            </svg>
+                            <Paperclip className="w-5 h-5" aria-hidden="true" />
                         </button>
                         <button
                             type="button"
@@ -445,20 +416,7 @@ export function MessageInput({
                                     : 'Send (Ctrl+Enter)'
                             }
                         >
-                            <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                aria-hidden="true"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                                />
-                            </svg>
+                            <Send className="w-5 h-5" aria-hidden="true" />
                         </button>
                     </div>
                 </div>
@@ -506,20 +464,10 @@ function PersonaSelector({
                           ? personas[0]?.title || personas[0]?.key
                           : `${personas.length} personas`}
                 </span>
-                <svg
+                <ChevronDown
                     className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
                     aria-hidden="true"
-                >
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                    />
-                </svg>
+                />
             </button>
 
             {isOpen && (

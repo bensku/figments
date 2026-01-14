@@ -1,3 +1,4 @@
+import { Bot } from 'lucide-react';
 import type { Persona } from '@/tables/persona';
 import { PersonaCard, type PersonaSource } from './persona-card';
 import { SPACING } from './styles';
@@ -51,21 +52,12 @@ export function PersonaList({
     if (isEmpty) {
         return (
             <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-                <svg
+                <Bot
                     width="48"
                     height="48"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
                     className="mb-4 text-gray-300"
                     aria-hidden="true"
-                >
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                </svg>
+                />
                 <p className="text-sm">
                     {view === 'space'
                         ? 'No presets in this space'

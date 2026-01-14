@@ -1,4 +1,5 @@
 import type { Row } from '@bensku/y-query';
+import { ChevronRight, File as FileIcon } from 'lucide-react';
 import {
     Children,
     cloneElement,
@@ -46,18 +47,11 @@ function ThinkingFragment({ fragment }: FragmentProps<'thinking'>) {
                 }}
                 className="inline-flex items-center gap-1 text-gray-400 hover:text-gray-600 transition-colors hover:[text-shadow:_0_0_8px_rgb(156_163_175_/_0.5)]"
             >
-                <svg
+                <ChevronRight
                     className={`w-3 h-3 transition-transform duration-150 ${expanded ? 'rotate-90' : ''}`}
                     fill="currentColor"
-                    viewBox="0 0 20 20"
                     aria-hidden="true"
-                >
-                    <path
-                        fillRule="evenodd"
-                        d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-                        clipRule="evenodd"
-                    />
-                </svg>
+                />
                 <span>Thinking</span>
             </button>
             {expanded && (
@@ -344,18 +338,11 @@ function WebSearchCallRenderer({
                 className={`inline-flex items-center gap-1 text-amber-700 ${results && results.length > 0 ? 'hover:text-amber-800 transition-colors hover:[text-shadow:_0_0_8px_rgb(217_119_6_/_0.4)]' : ''}`}
             >
                 {results && results.length > 0 && (
-                    <svg
+                    <ChevronRight
                         className={`w-3 h-3 transition-transform duration-150 ${expanded ? 'rotate-90' : ''}`}
                         fill="currentColor"
-                        viewBox="0 0 20 20"
                         aria-hidden="true"
-                    >
-                        <path
-                            fillRule="evenodd"
-                            d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-                            clipRule="evenodd"
-                        />
-                    </svg>
+                    />
                 )}
                 <span>Web search</span>
                 {query && <span className="ml-1">&ldquo;{query}&rdquo;</span>}
@@ -447,18 +434,11 @@ function WebSearchResultRenderer({ output }: { output: unknown }) {
                 }}
                 className="inline-flex items-center gap-1 text-amber-700 hover:text-amber-800 transition-colors hover:[text-shadow:_0_0_8px_rgb(217_119_6_/_0.4)]"
             >
-                <svg
+                <ChevronRight
                     className={`w-3 h-3 transition-transform duration-150 ${expanded ? 'rotate-90' : ''}`}
                     fill="currentColor"
-                    viewBox="0 0 20 20"
                     aria-hidden="true"
-                >
-                    <path
-                        fillRule="evenodd"
-                        d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-                        clipRule="evenodd"
-                    />
-                </svg>
+                />
                 <span>
                     {results.length} result{results.length !== 1 && 's'}
                 </span>
@@ -551,20 +531,7 @@ function FileFragment({ fragment }: FragmentProps<'file'>) {
 
     return (
         <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 text-gray-700 text-sm">
-            <svg
-                className="w-5 h-5 text-gray-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-            >
-                <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                />
-            </svg>
+            <FileIcon className="w-5 h-5 text-gray-500" aria-hidden="true" />
             <span
                 className="max-w-[200px] truncate"
                 title={fragment.data.filename}

@@ -1,6 +1,7 @@
 import type { Row } from '@bensku/y-query';
 import { eq } from '@bensku/y-query';
 import { useQuery, useRow } from '@bensku/y-query-react';
+import { Crosshair } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useSpaceDoc } from '@/context/space';
 import { usePersona } from '@/hooks/usePersonas';
@@ -265,17 +266,7 @@ export const StrandNode = memo(function StrandNode({
                     className="absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-blue-100 rounded-full text-gray-400 hover:text-blue-600 transition-colors shadow-sm border border-gray-200"
                     title="Focus on this branch"
                 >
-                    <svg
-                        className="w-4 h-4"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        aria-hidden="true"
-                    >
-                        <circle cx="12" cy="12" r="3" />
-                        <path d="M12 2v4m0 12v4M2 12h4m12 0h4" />
-                    </svg>
+                    <Crosshair className="w-4 h-4" aria-hidden="true" />
                 </button>
             )}
         </div>
