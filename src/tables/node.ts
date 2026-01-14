@@ -94,19 +94,22 @@ export const FragmentTable = table(
             z.object({
                 type: z.literal('thinking'),
                 text: z.instanceof(Y.Text).meta({ syncAs: Y.Text }),
-                // TODO encrypted thinking?
+                providerOptions: z.any(),
             }),
             z.object({
                 type: z.literal('toolCall'),
                 callId: z.string(),
                 toolName: z.string(),
                 input: z.any(),
+                providerExecuted: z.boolean().optional(),
+                providerOptions: z.any().optional(),
             }),
             z.object({
                 type: z.literal('toolResult'),
                 callId: z.string(),
                 toolName: z.string(),
                 output: z.any(),
+                providerOptions: z.any().optional(),
             }),
             z.object({
                 type: z.literal('text'),

@@ -1,6 +1,7 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
+import { devToolsMiddleware } from '@ai-sdk/devtools';
 import { createOpenAI } from '@ai-sdk/openai';
-import type { LanguageModel } from 'ai';
+import { type LanguageModel, wrapLanguageModel } from 'ai';
 import { MockLanguageModelV3 } from 'ai/test';
 import { CONFIG } from '../config';
 import type { ModelConfig } from '../config/schema';
@@ -28,7 +29,10 @@ function createLanguageModel(config: ModelConfig): LanguageModel {
                 baseURL: config.baseUrl,
                 apiKey,
             });
-            return anthropic(config.model);
+            return wrapLanguageModel({
+                model: anthropic(config.model),
+                middleware: devToolsMiddleware(),
+            });
         }
         case 'openai': {
             const openai = createOpenAI({

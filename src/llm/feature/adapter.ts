@@ -54,7 +54,10 @@ export function personaToProviderOptions(
                 thinking: {
                     type: thinking ? 'enabled' : 'disabled',
                     budgetTokens: thinking
-                        ? (featureValue(persona, 'thinkingBudget') as number)
+                        ? ((featureValue(
+                              persona,
+                              'thinkingBudget',
+                          ) as number) ?? 4096)
                         : undefined,
                 },
                 effort: featureValue(persona, 'effort') as

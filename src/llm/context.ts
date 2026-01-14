@@ -61,9 +61,7 @@ async function toMessage(
     const allParts = await Promise.all(fragments.map((f) => toPart(f, model)));
     // Filter out tool calls and tool results - they were already consumed
     // during the original generation; the text response is what matters
-    const parts = allParts.filter(
-        (p) => p.type !== 'tool-call' && p.type !== 'tool-result',
-    );
+    const parts = allParts;
 
     switch (creator) {
         case 'user':
@@ -91,6 +89,7 @@ async function toPart(fragment: Row<typeof FragmentTable>, model: Model) {
             return {
                 type: 'reasoning',
                 text: data.text.toString(),
+                providerOptions: data.providerOptions,
             };
         case 'toolCall':
             return {
@@ -98,13 +97,19 @@ async function toPart(fragment: Row<typeof FragmentTable>, model: Model) {
                 toolCallId: data.callId,
                 toolName: data.toolName,
                 input: data.input,
+                providerExecuted: data.providerExecuted,
+                providerOptions: data.providerOptions,
             };
         case 'toolResult':
             return {
                 type: 'tool-result',
                 toolCallId: data.callId,
                 toolName: data.toolName,
-                output: data.output,
+                output: {
+                    type: 'json',
+                    value: data.output,
+                },
+                providerOptions: data.providerOptions,
             };
         case 'file': {
             // TODO optionally use presigned URLs to avoid downloading data in memory

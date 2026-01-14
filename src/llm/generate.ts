@@ -131,12 +131,14 @@ export async function generateFragments(
         // Track citations for current text block (source events arrive before text-end)
         let currentBlockCitations: Citation[] = [];
 
+        const fragments = [];
         for await (const part of result.fullStream) {
             switch (part.type) {
                 case 'reasoning-start':
                     current = newFragment({
                         type: 'thinking',
                         text: new Y.Text(),
+                        providerOptions: undefined,
                     });
                     break;
                 case 'reasoning-delta':
@@ -150,6 +152,7 @@ export async function generateFragments(
                     }
                     break;
                 case 'reasoning-end':
+                    fragments.push(current);
                     current = null;
                     break;
                 case 'text-start':
@@ -170,6 +173,7 @@ export async function generateFragments(
                     }
                     break;
                 case 'text-end':
+                    fragments.push(current);
                     // Attach collected citations to the fragment if any
                     if (
                         current?.data.type === 'text' &&
@@ -187,20 +191,24 @@ export async function generateFragments(
                     currentBlockCitations = [];
                     break;
                 case 'tool-call':
-                    newFragment({
-                        type: 'toolCall',
-                        callId: part.toolCallId,
-                        toolName: part.toolName,
-                        input: part.input,
-                    });
+                    fragments.push(
+                        newFragment({
+                            type: 'toolCall',
+                            callId: part.toolCallId,
+                            toolName: part.toolName,
+                            input: part.input,
+                        }),
+                    );
                     break;
                 case 'tool-result':
-                    newFragment({
-                        type: 'toolResult',
-                        callId: part.toolCallId,
-                        toolName: part.toolName,
-                        output: part.output,
-                    });
+                    fragments.push(
+                        newFragment({
+                            type: 'toolResult',
+                            callId: part.toolCallId,
+                            toolName: part.toolName,
+                            output: part.output,
+                        }),
+                    );
                     break;
                 case 'source': {
                     // Document citations (page_location, char_location) come through here
@@ -241,8 +249,50 @@ export async function generateFragments(
                 case 'abort':
                     // TODO do we need to handle this somehow?
                     break;
-                // TODO implement tool calls, though no need to stream those :)
+                // TODO fix client-side tool calls - i.e. multiple steps
             }
+        }
+
+        // Backfill data that was not available during streaming to parts
+        const output = (await result.response).messages;
+        if (output.length !== 1 || !output[0]) {
+            throw new Error(
+                'should not happen, agents are not yet supported and would break many other things!',
+            );
+        }
+        let i = 0; // content might not be real array, so it lacks e.g. entries()
+        for (const part of output[0].content) {
+            // Add reasoning signatures, tool call metadata, etc.
+            const frag = fragments[i];
+            if (typeof part === 'object' && frag) {
+                if (part.type === 'reasoning') {
+                    update(doc, FragmentTable, {
+                        key: frag.key,
+                        data: {
+                            type: 'thinking', // Workaround for writeUnion() bug in y-query, remove if fixed
+                            providerOptions: part.providerOptions,
+                        },
+                    });
+                } else if (part.type === 'tool-call') {
+                    update(doc, FragmentTable, {
+                        key: frag.key,
+                        data: {
+                            type: 'toolCall',
+                            providerExecuted: part.providerExecuted,
+                            providerOptions: part.providerOptions,
+                        },
+                    });
+                } else if (part.type === 'tool-result') {
+                    update(doc, FragmentTable, {
+                        key: frag.key,
+                        data: {
+                            type: 'toolResult',
+                            providerOptions: part.providerOptions,
+                        },
+                    });
+                }
+            }
+            i++;
         }
     } catch (e) {
         errored = true;
@@ -268,7 +318,7 @@ export async function generateFragments(
 
     // Generate pre-determined choices
     if (!errored) {
-        generateChoices(doc, node, fullContext);
+        generateChoices(doc, node, [...fullContext]);
     }
 
     // Summarize node in background for card views
