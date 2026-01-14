@@ -11,3 +11,13 @@ export const sourceLabels: Record<PersonaSource, string> = {
     user: 'User',
     space: 'Space',
 };
+
+/**
+ * Input width constants for consistent sizing across forms
+ */
+export const INPUT_WIDTHS = {
+    /** Width for number inputs in feature controls */
+    NUMBER: 'w-20',
+    /** Width for select dropdowns in feature controls */
+    SELECT: 'w-28',
+} as const;

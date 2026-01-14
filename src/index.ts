@@ -2,6 +2,7 @@ import type { ServerWebSocket } from 'bun';
 import { requireUser } from './auth/hook';
 import { CONFIG } from './config';
 import index from './index.html';
+import { modelFeatures } from './llm/feature';
 import { hocuspocus } from './sync/server';
 import { WsAdapter } from './sync/ws-adapter';
 
@@ -66,7 +67,7 @@ const server = Bun.serve({
                 CONFIG.models.map((model) => ({
                     id: model.id,
                     displayName: model.displayName,
-                    features: model.features,
+                    features: modelFeatures(model),
                 })),
             );
         },

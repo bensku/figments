@@ -4,6 +4,7 @@ import { Modal } from '@/components/ui/modal';
 import { useInstance } from '@/context/instance';
 import { useSpace } from '@/context/space';
 import { useUser } from '@/context/user';
+import { cn } from '@/utils/cn';
 import { GeneralSettings } from './general';
 
 interface SettingsModalProps {
@@ -39,20 +40,24 @@ export function SettingsModal({
                         activeTab={activeTab}
                         onTabChange={setActiveTab}
                     />
-                    <div className="flex-1 overflow-y-auto">
+                    <div className="flex-1 min-h-0">
                         {activeTab === 'general' && (
-                            <GeneralSettings userDoc={userDoc} />
+                            <div className="h-full overflow-y-auto">
+                                <GeneralSettings userDoc={userDoc} />
+                            </div>
                         )}
                         {activeTab === 'personas' && (
-                            <PersonaEditor
-                                key={activeTab}
-                                defaultView={spaceDoc ? 'space' : 'user'}
-                                isOpen={isOpen}
-                                spaceDoc={spaceDoc}
-                                userDoc={userDoc}
-                                instancePersonas={instance?.personas ?? []}
-                                models={instance?.models ?? []}
-                            />
+                            <div className="h-full w-full">
+                                <PersonaEditor
+                                    key={activeTab}
+                                    defaultView={spaceDoc ? 'space' : 'user'}
+                                    isOpen={isOpen}
+                                    spaceDoc={spaceDoc}
+                                    userDoc={userDoc}
+                                    instancePersonas={instance?.personas ?? []}
+                                    models={instance?.models ?? []}
+                                />
+                            </div>
                         )}
                     </div>
                 </div>
@@ -84,14 +89,12 @@ function SettingsSidebar({ activeTab, onTabChange }: SettingsSidebarProps) {
                         <button
                             type="button"
                             onClick={() => onTabChange(tab.id)}
-                            className={`
-                                w-full text-left px-3 py-2 text-sm rounded-lg transition-colors
-                                ${
-                                    activeTab === tab.id
-                                        ? 'bg-gray-100 text-gray-900 font-medium'
-                                        : 'text-gray-600 hover:bg-gray-50'
-                                }
-                            `}
+                            className={cn(
+                                'w-full text-left px-3 py-2 text-sm rounded-lg transition-colors',
+                                activeTab === tab.id
+                                    ? 'bg-gray-100 text-gray-900 font-medium'
+                                    : 'text-gray-600 hover:bg-gray-50',
+                            )}
                         >
                             {tab.label}
                         </button>

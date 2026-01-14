@@ -10,7 +10,11 @@ import {
     extractRawCitation,
 } from './citation';
 import { loadContext } from './context';
-import { featuresToProviderOptions, featuresToTools } from './feature';
+import {
+    personaToHeaders,
+    personaToProviderOptions,
+    personaToTools,
+} from './feature/adapter';
 import { MODEL_MAP } from './model';
 import { getPersona } from './persona';
 
@@ -90,7 +94,7 @@ export async function generateFragments(
     // TODO non-main fragment handling
 
     // Figure what we'll be feeding to the LLM
-    const system = persona.systemPrompt;
+    const system = persona.systemPrompt ?? undefined;
     const context = await loadContext(doc, node, model);
 
     // Patch context with persona's options
@@ -110,12 +114,14 @@ export async function generateFragments(
             system,
             messages: context,
             // Convert features that are implemented as tools to AI SDK's tools
-            tools: featuresToTools(model.config.provider, persona.features),
+            tools: personaToTools(model.config.provider, persona),
             // Do same for features implemented with provider-specific API options
-            providerOptions: featuresToProviderOptions(
+            providerOptions: personaToProviderOptions(
                 model.config.provider,
-                persona.features,
+                persona,
             ),
+            // And for headers to e.g. enable beta features
+            headers: personaToHeaders(model.config.provider, persona),
             // Enable raw chunks to access web search citations (AI SDK filters them out)
             includeRawChunks: true,
         });

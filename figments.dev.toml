@@ -40,14 +40,14 @@ provider = "anthropic"
 model = "claude-opus-4-5"
 displayName = "Claude Opus"
 supportedMediaTypes = [ "image/png", "image/jpeg", "image/webp", "application/pdf" ]
-features = [ "thinking", "effort", "webSearch", "webFetch" ]
+features = [ "thinking", "interleavedThinking", "thinkingBudget", "effort", "webSearch", "webFetch" ]
 
 [[personas]]
 key = "default"
 title = "Default"
 model = "default"
 features = [
-    { feature = "thinking" },
+    { feature = "thinking", value = true },
 ]
 
 [[personas]]
@@ -74,8 +74,8 @@ key = "opus"
 title = "Claude Opus"
 model = "opus"
 features = [
-    { feature = "thinking" },
-    { feature = "effort", level = "high" },
-    { feature = "webSearch" },
-    { feature = "webFetch" }
+    { feature = "thinking", value = true },
+    { feature = "effort", value = "high" },
+    { feature = "webSearch", value = true },
+    { feature = "webFetch", value = true }
 ]

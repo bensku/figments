@@ -41,23 +41,23 @@ export function PersonaCard({
         // biome-ignore lint/a11y/useKeyWithClickEvents: keyboard accessible via action buttons
         // biome-ignore lint/a11y/useSemanticElements: this is a card component, not a form fieldset
         <div
-            className="relative flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors cursor-pointer"
+            className="relative flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors cursor-pointer w-full"
             onClick={handleCardClick}
             role="group"
         >
-            <div className="flex items-center gap-3 min-w-0 pointer-events-none">
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900 truncate">
+            <div className="flex items-center gap-3 min-w-0 flex-1 pointer-events-none">
+                <div className="flex-1 min-w-0 overflow-hidden">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-medium text-gray-900 truncate min-w-0">
                             {persona.title}
                         </span>
                         <span
-                            className={`px-2 py-0.5 text-xs font-medium rounded-full ${sourceBadgeStyles[source]}`}
+                            className={`px-2 py-0.5 text-xs font-medium rounded-full flex-shrink-0 ${sourceBadgeStyles[source]}`}
                         >
                             {sourceLabels[source]}
                         </span>
                         {source === 'user' && isSyncedToSpace && (
-                            <span className="pointer-events-auto">
+                            <span className="pointer-events-auto flex-shrink-0">
                                 {isOutdated ? (
                                     <span
                                         title="Out of sync - import to update"
@@ -134,14 +134,14 @@ export function PersonaCard({
                         )}
                     </div>
                     {persona.systemPrompt && (
-                        <p className="text-sm text-gray-500 truncate mt-0.5">
+                        <p className="text-sm text-gray-500 line-clamp-2 min-w-0 mt-0.5">
                             {persona.systemPrompt}
                         </p>
                     )}
                 </div>
             </div>
 
-            <div className="flex items-center gap-1 pointer-events-auto">
+            <div className="flex items-center gap-1 pointer-events-auto flex-shrink-0">
                 {onImport && canImport && (
                     <button
                         type="button"

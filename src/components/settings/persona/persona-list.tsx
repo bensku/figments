@@ -1,5 +1,6 @@
 import type { Persona } from '@/tables/persona';
 import { PersonaCard, type PersonaSource } from './persona-card';
+import { SPACING } from './styles';
 
 type ViewType = 'space' | 'user';
 
@@ -79,7 +80,9 @@ export function PersonaList({
 
     if (view === 'space') {
         return (
-            <div className="space-y-2 p-4">
+            <div
+                className={`${SPACING.SECTION_GAP_SM} ${SPACING.CONTENT} w-full`}
+            >
                 {spacePersonas
                     .filter(
                         (persona) => !syncedUserPersonaKeys.has(persona.key),
@@ -141,7 +144,7 @@ export function PersonaList({
 
     // User view
     return (
-        <div className="space-y-2 p-4">
+        <div className={`${SPACING.SECTION_GAP_SM} ${SPACING.CONTENT} w-full`}>
             {[...userPersonas].sort(sortByTitle).map((persona) => {
                 const isSynced = syncedUserPersonaKeys.has(persona.key);
                 const isOutdated = outdatedUserPersonaKeys.has(persona.key);

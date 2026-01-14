@@ -106,7 +106,7 @@ export function Modal({
                         </svg>
                     </button>
                 </div>
-                <div className="flex-1 overflow-y-auto">{children}</div>
+                <div className="flex-1 min-h-0">{children}</div>
             </div>
         </div>
     );

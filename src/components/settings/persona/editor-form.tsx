@@ -5,6 +5,10 @@ import type { Model } from '@/context/instance';
 import { useAutoExpandingTextarea } from '@/hooks/useAutoExpandingTextarea';
 import { useAutoFocus } from '@/hooks/useAutoFocus';
 import type { Persona } from '@/tables/persona';
+import { cn } from '@/utils/cn';
+import { FeatureList } from './feature-list';
+import { OptionalTextareaField } from './optional-textarea';
+import { SPACING } from './styles';
 
 type FormMode = 'view' | 'edit' | 'create';
 
@@ -64,49 +68,62 @@ export function PersonaForm({
     );
     const availableFeatures = selectedModel?.features ?? [];
 
-    const isFeatureEnabled = (featureName: string) =>
-        features.some((f) => f.feature === featureName);
-
-    const getEffortLevel = () => {
-        const effort = features.find((f) => f.feature === 'effort');
-        return effort?.feature === 'effort' ? effort.level : 'medium';
-    };
-
-    const toggleFeature = (featureName: string) => {
-        if (isFeatureEnabled(featureName)) {
-            setFeatures(features.filter((f) => f.feature !== featureName));
+    const updateFeature = (
+        featureId: string,
+        value: boolean | number | string,
+    ) => {
+        const existing = features.find((f) => f.feature === featureId);
+        if (existing) {
+            setFeatures(
+                features.map((f) =>
+                    f.feature === featureId ? { feature: featureId, value } : f,
+                ),
+            );
         } else {
-            if (featureName === 'thinking') {
-                setFeatures([...features, { feature: 'thinking' }]);
-            } else if (featureName === 'effort') {
-                setFeatures([
-                    ...features,
-                    { feature: 'effort', level: 'medium' },
-                ]);
-            } else if (featureName === 'webSearch') {
-                setFeatures([...features, { feature: 'webSearch' }]);
-            } else if (featureName === 'webFetch') {
-                setFeatures([...features, { feature: 'webFetch' }]);
-            }
+            setFeatures([...features, { feature: featureId, value }]);
         }
     };
 
-    const setEffortLevel = (level: 'low' | 'medium' | 'high' | 'xhigh') => {
-        setFeatures(
-            features.map((f) =>
-                f.feature === 'effort' ? { feature: 'effort', level } : f,
-            ),
-        );
+    const removeFeature = (featureId: string) => {
+        setFeatures(features.filter((f) => f.feature !== featureId));
     };
 
     const titleInputRef = useRef<HTMLInputElement>(null);
     useAutoFocus(mode === 'create', titleInputRef);
-    const { ref: systemPromptRef, adjustHeight } = useAutoExpandingTextarea();
+    const { ref: systemPromptRef, adjustHeight: adjustSystemPromptHeight } =
+        useAutoExpandingTextarea();
+    const { ref: promptSuffixRef, adjustHeight: adjustPromptSuffixHeight } =
+        useAutoExpandingTextarea();
+    const { ref: prefillRef, adjustHeight: adjustPrefillHeight } =
+        useAutoExpandingTextarea();
 
-    // Adjust textarea height when content changes or on initial load
+    // Track which optional fields are expanded
+    const [showSystemPrompt, setShowSystemPrompt] = useState(
+        !!(persona?.systemPrompt ?? ''),
+    );
+    const [showPromptSuffix, setShowPromptSuffix] = useState(
+        !!(persona?.promptSuffix ?? ''),
+    );
+    const [showPrefill, setShowPrefill] = useState(!!(persona?.prefill ?? ''));
+
+    // Reset visibility when persona changes
+    // biome-ignore lint/correctness/useExhaustiveDependencies: intentional - reset only on persona identity change
     useEffect(() => {
-        adjustHeight();
-    }, [adjustHeight]);
+        setShowSystemPrompt(!!(persona?.systemPrompt ?? ''));
+        setShowPromptSuffix(!!(persona?.promptSuffix ?? ''));
+        setShowPrefill(!!(persona?.prefill ?? ''));
+    }, [persona?.key]);
+
+    // Adjust textarea heights when content changes or on initial load
+    useEffect(() => {
+        adjustSystemPromptHeight();
+        adjustPromptSuffixHeight();
+        adjustPrefillHeight();
+    }, [
+        adjustSystemPromptHeight,
+        adjustPromptSuffixHeight,
+        adjustPrefillHeight,
+    ]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -119,10 +136,10 @@ export function PersonaForm({
             key: persona?.key ?? crypto.randomUUID(),
             title: title.trim(),
             model,
-            systemPrompt: systemPrompt.trim() || undefined,
-            promptSuffix: promptSuffix.trim() || undefined,
-            prefill: prefill.trim() || undefined,
-            importByDefault: showImportByDefault ? importByDefault : undefined,
+            systemPrompt: systemPrompt.trim() || null,
+            promptSuffix: promptSuffix.trim() || null,
+            prefill: prefill.trim() || null,
+            importByDefault: showImportByDefault ? importByDefault : null,
             features,
         };
 
@@ -135,262 +152,159 @@ export function PersonaForm({
     }));
 
     return (
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            <div>
-                <label
-                    htmlFor="title"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                    Title
-                </label>
-                <input
-                    ref={titleInputRef}
-                    id="title"
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    disabled={isReadOnly}
-                    placeholder="Enter persona title"
-                    className={`
-                        w-full px-3 py-2 text-sm border border-gray-300 rounded-lg
-                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                        ${isReadOnly ? 'bg-gray-100 text-gray-500' : ''}
-                    `}
-                    required
-                />
-            </div>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3">
+                {/* Basic info section */}
+                <div className="grid grid-cols-2 gap-3">
+                    <div>
+                        <label
+                            htmlFor="title"
+                            className="block text-xs font-medium text-gray-700 mb-1"
+                        >
+                            Title
+                        </label>
+                        <input
+                            ref={titleInputRef}
+                            id="title"
+                            type="text"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            disabled={isReadOnly}
+                            placeholder="Enter preset title"
+                            className={cn(
+                                'w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-md',
+                                'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
+                                isReadOnly && 'bg-gray-100 text-gray-500',
+                            )}
+                            required
+                        />
+                    </div>
 
-            <div>
-                <label
-                    htmlFor="model"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                    Model
-                </label>
-                <Select
-                    id="model"
-                    options={modelOptions}
-                    value={model}
-                    onChange={setModel}
-                    placeholder="Select a model"
-                    disabled={isReadOnly}
-                />
-            </div>
-
-            <div>
-                <label
-                    htmlFor="systemPrompt"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                    System Prompt
-                </label>
-                <textarea
-                    ref={systemPromptRef}
-                    id="systemPrompt"
-                    value={systemPrompt}
-                    onChange={(e) => {
-                        setSystemPrompt(e.target.value);
-                        adjustHeight();
-                    }}
-                    disabled={isReadOnly}
-                    placeholder="Enter system prompt (optional)"
-                    rows={3}
-                    className={`
-                        w-full px-3 py-2 text-sm border border-gray-300 rounded-lg
-                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                        resize-none overflow-hidden
-                        ${isReadOnly ? 'bg-gray-100 text-gray-500' : ''}
-                    `}
-                />
-            </div>
-
-            <div>
-                <label
-                    htmlFor="promptSuffix"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                    Prompt Suffix
-                </label>
-                <input
-                    id="promptSuffix"
-                    type="text"
-                    value={promptSuffix}
-                    onChange={(e) => setPromptSuffix(e.target.value)}
-                    disabled={isReadOnly}
-                    placeholder="Appended to user message (optional)"
-                    className={`
-                        w-full px-3 py-2 text-sm border border-gray-300 rounded-lg
-                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                        ${isReadOnly ? 'bg-gray-100 text-gray-500' : ''}
-                    `}
-                />
-            </div>
-
-            <div>
-                <label
-                    htmlFor="prefill"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                    Prefill
-                </label>
-                <input
-                    id="prefill"
-                    type="text"
-                    value={prefill}
-                    onChange={(e) => setPrefill(e.target.value)}
-                    disabled={isReadOnly}
-                    placeholder="Prefilled in LLM responses (optional)"
-                    className={`
-                        w-full px-3 py-2 text-sm border border-gray-300 rounded-lg
-                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                        ${isReadOnly ? 'bg-gray-100 text-gray-500' : ''}
-                    `}
-                />
-            </div>
-
-            {showImportByDefault && (
-                <div className="flex items-center gap-2">
-                    <input
-                        id="importByDefault"
-                        type="checkbox"
-                        checked={importByDefault}
-                        onChange={(e) => setImportByDefault(e.target.checked)}
-                        disabled={isReadOnly}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <label
-                        htmlFor="importByDefault"
-                        className="text-sm text-gray-700"
-                    >
-                        Auto-sync to new spaces
-                    </label>
-                </div>
-            )}
-
-            {availableFeatures.length > 0 && (
-                <div>
-                    <span className="block text-sm font-medium text-gray-700 mb-2">
-                        Features
-                    </span>
-                    <div className="space-y-3">
-                        {availableFeatures.includes('thinking') && (
-                            <div className="flex items-center gap-2">
-                                <input
-                                    id="feature-thinking"
-                                    type="checkbox"
-                                    checked={isFeatureEnabled('thinking')}
-                                    onChange={() => toggleFeature('thinking')}
-                                    disabled={isReadOnly}
-                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                />
-                                <label
-                                    htmlFor="feature-thinking"
-                                    className="text-sm text-gray-700"
-                                >
-                                    Extended thinking
-                                </label>
-                            </div>
-                        )}
-                        {availableFeatures.includes('effort') && (
-                            <div className="flex items-center gap-3">
-                                <input
-                                    id="feature-effort"
-                                    type="checkbox"
-                                    checked={isFeatureEnabled('effort')}
-                                    onChange={() => toggleFeature('effort')}
-                                    disabled={isReadOnly}
-                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                />
-                                <label
-                                    htmlFor="feature-effort"
-                                    className="text-sm text-gray-700"
-                                >
-                                    Effort
-                                </label>
-                                {isFeatureEnabled('effort') && (
-                                    <Select
-                                        id="effort-level"
-                                        options={[
-                                            { value: 'low', label: 'Low' },
-                                            {
-                                                value: 'medium',
-                                                label: 'Medium',
-                                            },
-                                            { value: 'high', label: 'High' },
-                                            {
-                                                value: 'xhigh',
-                                                label: 'Extra High',
-                                            },
-                                        ]}
-                                        value={getEffortLevel()}
-                                        onChange={(v) =>
-                                            setEffortLevel(
-                                                v as
-                                                    | 'low'
-                                                    | 'medium'
-                                                    | 'high'
-                                                    | 'xhigh',
-                                            )
-                                        }
-                                        disabled={isReadOnly}
-                                    />
-                                )}
-                            </div>
-                        )}
-                        {availableFeatures.includes('webSearch') && (
-                            <div className="flex items-center gap-2">
-                                <input
-                                    id="feature-webSearch"
-                                    type="checkbox"
-                                    checked={isFeatureEnabled('webSearch')}
-                                    onChange={() => toggleFeature('webSearch')}
-                                    disabled={isReadOnly}
-                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                />
-                                <label
-                                    htmlFor="feature-webSearch"
-                                    className="text-sm text-gray-700"
-                                >
-                                    Web search
-                                </label>
-                            </div>
-                        )}
-                        {availableFeatures.includes('webFetch') && (
-                            <div className="flex items-center gap-2">
-                                <input
-                                    id="feature-webFetch"
-                                    type="checkbox"
-                                    checked={isFeatureEnabled('webFetch')}
-                                    onChange={() => toggleFeature('webFetch')}
-                                    disabled={isReadOnly}
-                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                />
-                                <label
-                                    htmlFor="feature-webFetch"
-                                    className="text-sm text-gray-700"
-                                >
-                                    Web fetch
-                                </label>
-                            </div>
-                        )}
+                    <div>
+                        <label
+                            htmlFor="model"
+                            className="block text-xs font-medium text-gray-700 mb-1"
+                        >
+                            Model
+                        </label>
+                        <Select
+                            id="model"
+                            options={modelOptions}
+                            value={model}
+                            onChange={setModel}
+                            placeholder="Select a model"
+                            disabled={isReadOnly}
+                        />
                     </div>
                 </div>
-            )}
+
+                {/* Prompts section */}
+                <div className={`${SPACING.SECTION_GAP} pt-2`}>
+                    <OptionalTextareaField
+                        id="systemPrompt"
+                        label="System Prompt"
+                        value={systemPrompt}
+                        onChange={setSystemPrompt}
+                        onAdjustHeight={adjustSystemPromptHeight}
+                        isVisible={showSystemPrompt}
+                        onShow={() => setShowSystemPrompt(true)}
+                        onRemove={() => {
+                            setSystemPrompt('');
+                            setShowSystemPrompt(false);
+                        }}
+                        isReadOnly={isReadOnly}
+                        placeholder="Enter system prompt"
+                        textareaRef={systemPromptRef}
+                    />
+
+                    <OptionalTextareaField
+                        id="promptSuffix"
+                        label="Prompt Suffix"
+                        value={promptSuffix}
+                        onChange={setPromptSuffix}
+                        onAdjustHeight={adjustPromptSuffixHeight}
+                        isVisible={showPromptSuffix}
+                        onShow={() => setShowPromptSuffix(true)}
+                        onRemove={() => {
+                            setPromptSuffix('');
+                            setShowPromptSuffix(false);
+                        }}
+                        isReadOnly={isReadOnly}
+                        placeholder="Appended to message"
+                        textareaRef={promptSuffixRef}
+                    />
+
+                    <OptionalTextareaField
+                        id="prefill"
+                        label="Prefill"
+                        value={prefill}
+                        onChange={setPrefill}
+                        onAdjustHeight={adjustPrefillHeight}
+                        isVisible={showPrefill}
+                        onShow={() => setShowPrefill(true)}
+                        onRemove={() => {
+                            setPrefill('');
+                            setShowPrefill(false);
+                        }}
+                        isReadOnly={isReadOnly}
+                        placeholder="Prefilled in responses"
+                        textareaRef={prefillRef}
+                    />
+                </div>
+
+                {showImportByDefault && (
+                    <div className="flex items-center gap-2 pt-2">
+                        <input
+                            id="importByDefault"
+                            type="checkbox"
+                            checked={importByDefault}
+                            onChange={(e) =>
+                                setImportByDefault(e.target.checked)
+                            }
+                            disabled={isReadOnly}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label
+                            htmlFor="importByDefault"
+                            className="text-xs text-gray-700"
+                        >
+                            Auto-sync to new spaces
+                        </label>
+                    </div>
+                )}
+
+                {availableFeatures.length > 0 && (
+                    <div className="pt-2 border-t border-gray-100">
+                        <span className="block text-xs font-medium text-gray-700 mb-2">
+                            Features
+                        </span>
+                        <FeatureList
+                            features={availableFeatures}
+                            values={features}
+                            onUpdate={updateFeature}
+                            onRemove={removeFeature}
+                            isReadOnly={isReadOnly}
+                        />
+                    </div>
+                )}
+            </div>
 
             {!isReadOnly && (
-                <div className="flex justify-end gap-2 pt-4 border-t border-gray-200">
+                <div
+                    className={`flex justify-end gap-2 ${SPACING.FOOTER} border-t border-gray-200 bg-white`}
+                >
                     {onCancel && (
                         <button
                             type="button"
                             onClick={onCancel}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                            className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
                         >
                             Cancel
                         </button>
                     )}
                     <button
                         type="submit"
-                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                        className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
                     >
                         {mode === 'create' ? 'Create' : 'Save'}
                     </button>

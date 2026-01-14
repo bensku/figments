@@ -91,7 +91,7 @@ export function usePersonaActions({
                 title: `${persona.title} (copy)`,
                 // Remove importByDefault when cloning to space
                 importByDefault:
-                    target === 'user' ? persona.importByDefault : undefined,
+                    target === 'user' ? persona.importByDefault : null,
             };
             upsert(doc, PersonaTable, clonedPersona);
         },
@@ -106,7 +106,7 @@ export function usePersonaActions({
             const importedPersona: Persona = {
                 ...persona,
                 // Remove importByDefault flag when importing to space
-                importByDefault: undefined,
+                importByDefault: null,
             };
             upsert(spaceDoc, PersonaTable, importedPersona);
         },

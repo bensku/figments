@@ -16,12 +16,6 @@ export const AuthConfig = z.discriminatedUnion('type', [
 ]);
 
 export const ModelProvider = z.enum(['anthropic', 'openai']);
-export const ModelFeature = z.enum([
-    'thinking',
-    'effort',
-    'webSearch',
-    'webFetch',
-]);
 
 export const ModelConfig = z.object({
     /**
@@ -65,24 +59,20 @@ export const ModelConfig = z.object({
     /**
      * Features supported by and enabled for this model.
      */
-    features: z.array(ModelFeature),
+    features: z.array(z.string()),
 });
 
-export const FeatureConfig = z.discriminatedUnion('feature', [
-    z.object({
-        feature: z.literal('thinking'),
-    }),
-    z.object({
-        feature: z.literal('effort'),
-        level: z.enum(['low', 'medium', 'high', 'xhigh']),
-    }),
-    z.object({
-        feature: z.literal('webSearch'),
-    }),
-    z.object({
-        feature: z.literal('webFetch'),
-    }),
-]);
+export const FeatureConfig = z.object({
+    /**
+     * Feature id.
+     */
+    feature: z.string(),
+
+    /**
+     * Value for the feature configuration.
+     */
+    value: z.union([z.boolean(), z.number(), z.string()]),
+});
 
 export const PersonaConfig = z.object({
     key: z.string(),
@@ -100,25 +90,25 @@ export const PersonaConfig = z.object({
     /**
      * System prompt of this persona (or part of it, anyway).
      */
-    systemPrompt: z.string().optional(),
+    systemPrompt: z.string().nullish(),
 
     /**
      * If non-empty, append this to last user message's prompt when generating.
      * Not applied to node content.
      */
-    promptSuffix: z.string().optional(),
+    promptSuffix: z.string().nullish(),
 
     /**
      * Text to prefill in ALL LLM-authored messages. Not applied to node
      * content.
      */
-    prefill: z.string().optional(),
+    prefill: z.string().nullish(),
 
     /**
      * If set and true, and this persona is defined in user database, it gets
      * auto-imported to newly created spaces.
      */
-    importByDefault: z.boolean().optional(),
+    importByDefault: z.boolean().nullish(),
 
     /**
      * Configurations for model features that this persona enables.

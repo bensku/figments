@@ -7,9 +7,11 @@ import type { Model } from '@/context/instance';
 import { type Persona, PersonaTable } from '@/tables/persona';
 import { deepEqual } from '@/utils/equal';
 import { PersonaForm } from './editor-form';
+import { EditorHeader } from './editor-header';
 import { usePersonaActions } from './hooks';
 import type { PersonaSource } from './persona-card';
 import { PersonaList } from './persona-list';
+import { SPACING } from './styles';
 
 type ViewType = 'space' | 'user';
 type EditorState =
@@ -161,32 +163,11 @@ export function PersonaEditor({
         switch (editorState.mode) {
             case 'view':
                 return (
-                    <div>
-                        <div className="px-6 py-3 border-b border-gray-200 flex items-center gap-2">
-                            <button
-                                type="button"
-                                onClick={handleCancel}
-                                className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                                aria-label="Back to list"
-                            >
-                                <svg
-                                    width="20"
-                                    height="20"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    aria-hidden="true"
-                                >
-                                    <path d="M19 12H5M12 19l-7-7 7-7" />
-                                </svg>
-                            </button>
-                            <span className="text-sm font-medium text-gray-700">
-                                View Preset
-                            </span>
-                        </div>
+                    <div className="flex flex-col h-full w-full">
+                        <EditorHeader
+                            title="View Preset"
+                            onBack={handleCancel}
+                        />
                         <PersonaForm
                             mode="view"
                             persona={editorState.persona}
@@ -198,36 +179,11 @@ export function PersonaEditor({
 
             case 'create':
                 return (
-                    <div>
-                        <div className="px-6 py-3 border-b border-gray-200 flex items-center gap-2">
-                            <button
-                                type="button"
-                                onClick={handleCancel}
-                                className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                                aria-label="Back to list"
-                            >
-                                <svg
-                                    width="20"
-                                    height="20"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    aria-hidden="true"
-                                >
-                                    <path d="M19 12H5M12 19l-7-7 7-7" />
-                                </svg>
-                            </button>
-                            <span className="text-sm font-medium text-gray-700">
-                                Create{' '}
-                                {editorState.target === 'user'
-                                    ? 'User'
-                                    : 'Space'}{' '}
-                                Preset
-                            </span>
-                        </div>
+                    <div className="flex flex-col h-full w-full">
+                        <EditorHeader
+                            title={`Create ${editorState.target === 'user' ? 'User' : 'Space'} Preset`}
+                            onBack={handleCancel}
+                        />
                         <PersonaForm
                             mode="create"
                             models={models}
@@ -240,32 +196,11 @@ export function PersonaEditor({
 
             case 'edit':
                 return (
-                    <div>
-                        <div className="px-6 py-3 border-b border-gray-200 flex items-center gap-2">
-                            <button
-                                type="button"
-                                onClick={handleCancel}
-                                className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                                aria-label="Back to list"
-                            >
-                                <svg
-                                    width="20"
-                                    height="20"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    aria-hidden="true"
-                                >
-                                    <path d="M19 12H5M12 19l-7-7 7-7" />
-                                </svg>
-                            </button>
-                            <span className="text-sm font-medium text-gray-700">
-                                Edit Preset
-                            </span>
-                        </div>
+                    <div className="flex flex-col h-full w-full">
+                        <EditorHeader
+                            title="Edit Preset"
+                            onBack={handleCancel}
+                        />
                         <PersonaForm
                             mode="edit"
                             persona={editorState.persona}
@@ -279,8 +214,10 @@ export function PersonaEditor({
 
             default:
                 return (
-                    <div>
-                        <div className="px-4 pt-4 pb-2 flex justify-between items-center">
+                    <div className="flex flex-col h-full w-full">
+                        <div
+                            className={`${SPACING.LIST_HEADER} flex justify-between items-center`}
+                        >
                             <Tabs
                                 tabs={viewTabs}
                                 activeTab={activeView}
@@ -307,20 +244,24 @@ export function PersonaEditor({
                                 New
                             </button>
                         </div>
-                        <PersonaList
-                            view={activeView}
-                            instancePersonas={instancePersonas}
-                            userPersonas={userPersonas}
-                            spacePersonas={spacePersonas}
-                            syncedUserPersonaKeys={syncedUserPersonaKeys}
-                            outdatedUserPersonaKeys={outdatedUserPersonaKeys}
-                            hasSpace={hasSpace}
-                            onView={handleView}
-                            onEdit={handleEdit}
-                            onDelete={handleDelete}
-                            onClone={handleClone}
-                            onImport={handleImport}
-                        />
+                        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+                            <PersonaList
+                                view={activeView}
+                                instancePersonas={instancePersonas}
+                                userPersonas={userPersonas}
+                                spacePersonas={spacePersonas}
+                                syncedUserPersonaKeys={syncedUserPersonaKeys}
+                                outdatedUserPersonaKeys={
+                                    outdatedUserPersonaKeys
+                                }
+                                hasSpace={hasSpace}
+                                onView={handleView}
+                                onEdit={handleEdit}
+                                onDelete={handleDelete}
+                                onClone={handleClone}
+                                onImport={handleImport}
+                            />
+                        </div>
                     </div>
                 );
         }
