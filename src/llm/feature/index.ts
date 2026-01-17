@@ -53,11 +53,26 @@ export interface ChoicefulFeature extends BaseFeature<string> {
     choices: { id: string; title: string }[];
 }
 
+export interface TextFeature extends BaseFeature<string> {
+    type: 'text';
+
+    /**
+     * Placeholder text for the input field.
+     */
+    placeholder?: string;
+
+    /**
+     * Whether to use a multi-line textarea.
+     */
+    multiline?: boolean;
+}
+
 export type Feature =
     | SimpleFeature
     | DummyToggleFeature
     | RangedFeature
-    | ChoicefulFeature;
+    | ChoicefulFeature
+    | TextFeature;
 
 import './builtin';
 

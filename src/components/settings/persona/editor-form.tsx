@@ -6,8 +6,8 @@ import { useAutoExpandingTextarea } from '@/hooks/useAutoExpandingTextarea';
 import { useAutoFocus } from '@/hooks/useAutoFocus';
 import type { Persona } from '@/tables/persona';
 import { cn } from '@/utils/cn';
+import { CollapsibleTextarea } from './collapsible-textarea';
 import { FeatureList } from './feature-list';
-import { OptionalTextareaField } from './optional-textarea';
 import { SPACING } from './styles';
 
 type FormMode = 'view' | 'edit' | 'create';
@@ -39,7 +39,6 @@ export function PersonaForm({
     const [promptSuffix, setPromptSuffix] = useState(
         persona?.promptSuffix ?? '',
     );
-    const [prefill, setPrefill] = useState(persona?.prefill ?? '');
     const [importByDefault, setImportByDefault] = useState(
         persona?.importByDefault ?? false,
     );
@@ -56,7 +55,6 @@ export function PersonaForm({
         setModel(persona?.model ?? '');
         setSystemPrompt(persona?.systemPrompt ?? '');
         setPromptSuffix(persona?.promptSuffix ?? '');
-        setPrefill(persona?.prefill ?? '');
         setImportByDefault(persona?.importByDefault ?? false);
         setFeatures(persona?.features ?? []);
     }, [persona?.key]);
@@ -94,8 +92,6 @@ export function PersonaForm({
         useAutoExpandingTextarea();
     const { ref: promptSuffixRef, adjustHeight: adjustPromptSuffixHeight } =
         useAutoExpandingTextarea();
-    const { ref: prefillRef, adjustHeight: adjustPrefillHeight } =
-        useAutoExpandingTextarea();
 
     // Track which optional fields are expanded
     const [showSystemPrompt, setShowSystemPrompt] = useState(
@@ -104,26 +100,19 @@ export function PersonaForm({
     const [showPromptSuffix, setShowPromptSuffix] = useState(
         !!(persona?.promptSuffix ?? ''),
     );
-    const [showPrefill, setShowPrefill] = useState(!!(persona?.prefill ?? ''));
 
     // Reset visibility when persona changes
     // biome-ignore lint/correctness/useExhaustiveDependencies: intentional - reset only on persona identity change
     useEffect(() => {
         setShowSystemPrompt(!!(persona?.systemPrompt ?? ''));
         setShowPromptSuffix(!!(persona?.promptSuffix ?? ''));
-        setShowPrefill(!!(persona?.prefill ?? ''));
     }, [persona?.key]);
 
     // Adjust textarea heights when content changes or on initial load
     useEffect(() => {
         adjustSystemPromptHeight();
         adjustPromptSuffixHeight();
-        adjustPrefillHeight();
-    }, [
-        adjustSystemPromptHeight,
-        adjustPromptSuffixHeight,
-        adjustPrefillHeight,
-    ]);
+    }, [adjustSystemPromptHeight, adjustPromptSuffixHeight]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -138,7 +127,6 @@ export function PersonaForm({
             model,
             systemPrompt: systemPrompt.trim() || null,
             promptSuffix: promptSuffix.trim() || null,
-            prefill: prefill.trim() || null,
             importByDefault: showImportByDefault ? importByDefault : null,
             features,
         };
@@ -200,55 +188,38 @@ export function PersonaForm({
 
                 {/* Prompts section */}
                 <div className={`${SPACING.SECTION_GAP} pt-2`}>
-                    <OptionalTextareaField
+                    <CollapsibleTextarea
                         id="systemPrompt"
                         label="System Prompt"
                         value={systemPrompt}
                         onChange={setSystemPrompt}
                         onAdjustHeight={adjustSystemPromptHeight}
-                        isVisible={showSystemPrompt}
-                        onShow={() => setShowSystemPrompt(true)}
-                        onRemove={() => {
+                        isExpanded={showSystemPrompt}
+                        onExpand={() => setShowSystemPrompt(true)}
+                        onCollapse={() => {
                             setSystemPrompt('');
                             setShowSystemPrompt(false);
                         }}
-                        isReadOnly={isReadOnly}
+                        disabled={isReadOnly}
                         placeholder="Enter system prompt"
                         textareaRef={systemPromptRef}
                     />
 
-                    <OptionalTextareaField
+                    <CollapsibleTextarea
                         id="promptSuffix"
                         label="Prompt Suffix"
                         value={promptSuffix}
                         onChange={setPromptSuffix}
                         onAdjustHeight={adjustPromptSuffixHeight}
-                        isVisible={showPromptSuffix}
-                        onShow={() => setShowPromptSuffix(true)}
-                        onRemove={() => {
+                        isExpanded={showPromptSuffix}
+                        onExpand={() => setShowPromptSuffix(true)}
+                        onCollapse={() => {
                             setPromptSuffix('');
                             setShowPromptSuffix(false);
                         }}
-                        isReadOnly={isReadOnly}
+                        disabled={isReadOnly}
                         placeholder="Appended to message"
                         textareaRef={promptSuffixRef}
-                    />
-
-                    <OptionalTextareaField
-                        id="prefill"
-                        label="Prefill"
-                        value={prefill}
-                        onChange={setPrefill}
-                        onAdjustHeight={adjustPrefillHeight}
-                        isVisible={showPrefill}
-                        onShow={() => setShowPrefill(true)}
-                        onRemove={() => {
-                            setPrefill('');
-                            setShowPrefill(false);
-                        }}
-                        isReadOnly={isReadOnly}
-                        placeholder="Prefilled in responses"
-                        textareaRef={prefillRef}
                     />
                 </div>
 

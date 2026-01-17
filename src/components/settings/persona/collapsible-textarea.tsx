@@ -1,38 +1,41 @@
 import type { RefObject } from 'react';
 import { cn } from '@/utils/cn';
 
-interface OptionalTextareaFieldProps {
+interface CollapsibleTextareaProps {
     id: string;
     label: string;
     value: string;
     onChange: (value: string) => void;
-    onAdjustHeight: () => void;
-    isVisible: boolean;
-    onShow: () => void;
-    onRemove: () => void;
-    isReadOnly: boolean;
-    placeholder: string;
-    textareaRef: RefObject<HTMLTextAreaElement | null>;
+    placeholder?: string;
+    description?: string;
+    disabled?: boolean;
+    isExpanded: boolean;
+    onExpand: () => void;
+    onCollapse: () => void;
+    textareaRef?: RefObject<HTMLTextAreaElement | null>;
+    onAdjustHeight?: () => void;
 }
 
-export function OptionalTextareaField({
+export function CollapsibleTextarea({
     id,
     label,
     value,
     onChange,
-    onAdjustHeight,
-    isVisible,
-    onShow,
-    onRemove,
-    isReadOnly,
     placeholder,
+    description,
+    disabled = false,
+    isExpanded,
+    onExpand,
+    onCollapse,
     textareaRef,
-}: OptionalTextareaFieldProps) {
-    if (!isVisible && !isReadOnly) {
+    onAdjustHeight,
+}: CollapsibleTextareaProps) {
+    // Show "+ Add" button when collapsed (for editable fields)
+    if (!isExpanded && !disabled) {
         return (
             <button
                 type="button"
-                onClick={onShow}
+                onClick={onExpand}
                 className="block text-xs text-blue-600 hover:text-blue-700 font-medium"
             >
                 + Add {label}
@@ -40,7 +43,8 @@ export function OptionalTextareaField({
         );
     }
 
-    if (!isVisible) {
+    // Hide completely when collapsed in read-only mode
+    if (!isExpanded) {
         return null;
     }
 
@@ -53,10 +57,10 @@ export function OptionalTextareaField({
                 >
                     {label}
                 </label>
-                {!isReadOnly && (
+                {!disabled && (
                     <button
                         type="button"
-                        onClick={onRemove}
+                        onClick={onCollapse}
                         className="text-xs text-gray-500 hover:text-gray-700"
                     >
                         Remove
@@ -69,18 +73,21 @@ export function OptionalTextareaField({
                 value={value}
                 onChange={(e) => {
                     onChange(e.target.value);
-                    onAdjustHeight();
+                    onAdjustHeight?.();
                 }}
-                disabled={isReadOnly}
+                disabled={disabled}
                 placeholder={placeholder}
                 rows={2}
                 className={cn(
                     'w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-md',
                     'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
-                    'resize-none overflow-hidden',
-                    isReadOnly && 'bg-gray-100 text-gray-500',
+                    'resize-none overflow-hidden placeholder:text-gray-400',
+                    disabled && 'bg-gray-100 text-gray-500',
                 )}
             />
+            {description && (
+                <p className="text-xs text-gray-500 mt-1">{description}</p>
+            )}
         </div>
     );
 }

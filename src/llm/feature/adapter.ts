@@ -1,5 +1,5 @@
 import { type AnthropicProviderOptions, anthropic } from '@ai-sdk/anthropic';
-import type { ToolSet } from 'ai';
+import type { ModelMessage, ToolSet } from 'ai';
 import type z from 'zod';
 import type { ModelProvider } from '@/config/schema';
 import type { Persona } from '@/tables/persona';
@@ -95,5 +95,42 @@ export function personaToHeaders(
             };
         }
         // TODO OpenAI
+    }
+}
+
+/**
+ * Applies prefill to the message context if the model supports it.
+ * Must be called before streamText() to modify the messages array.
+ * @param provider Provider that is used.
+ * @param persona The persona configuration.
+ * @param context The message context to potentially modify.
+ * @returns Modified context with prefill applied, or original context if not supported.
+ */
+export function applyPrefill(
+    provider: z.output<typeof ModelProvider>,
+    persona: Persona,
+    context: ModelMessage[],
+): ModelMessage[] {
+    const prefillText = featureValue(persona, 'prefill') as string | undefined;
+
+    if (!prefillText?.trim()) {
+        return context;
+    }
+
+    switch (provider) {
+        case 'anthropic': {
+            // Anthropic does not support prefill when extended thinking is enabled
+            const thinkingEnabled =
+                featureValue(persona, 'thinking') === true ||
+                featureValue(persona, 'alwaysThinking') === true;
+            if (thinkingEnabled) {
+                return context;
+            }
+            // Anthropic supports prefill by adding a partial assistant message
+            return [...context, { role: 'assistant', content: prefillText }];
+        }
+        default:
+            // Other providers in general don't support prefill
+            return context;
     }
 }

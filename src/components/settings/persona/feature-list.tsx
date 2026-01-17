@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import type { FeatureConfig } from '@/config/schema';
 import type { Feature } from '@/llm/feature';
 import {
     ChoiceFeatureControl,
     DummyFeatureControl,
     RangeFeatureControl,
+    TextFeatureControl,
     ToggleFeatureControl,
 } from './feature-controls';
 import { SPACING } from './styles';
@@ -23,6 +25,20 @@ export function FeatureList({
     onRemove,
     isReadOnly,
 }: FeatureListProps) {
+    // Track expanded state for collapsible multiline text features
+    // Initialize based on whether features have non-empty values
+    const [expandedFields, setExpandedFields] = useState<Set<string>>(() => {
+        const initialExpanded = new Set<string>();
+        for (const feature of features) {
+            if (feature.type === 'text' && feature.multiline) {
+                const config = values.find((f) => f.feature === feature.id);
+                if (config?.value) {
+                    initialExpanded.add(feature.id);
+                }
+            }
+        }
+        return initialExpanded;
+    });
     const getFeatureValue = (featureId: string): boolean | number | string => {
         const config = values.find((f) => f.feature === featureId);
         if (config) return config.value;
@@ -113,6 +129,45 @@ export function FeatureList({
                         disabled={isReadOnly}
                         available={available}
                         requiresText={requiresText}
+                    />
+                );
+
+            case 'text':
+                return (
+                    <TextFeatureControl
+                        key={feature.id}
+                        feature={feature}
+                        value={value as string}
+                        isCustomized={customized}
+                        onChange={(newValue) => onUpdate(feature.id, newValue)}
+                        onReset={() => onRemove(feature.id)}
+                        disabled={isReadOnly}
+                        available={available}
+                        requiresText={requiresText}
+                        isExpanded={
+                            feature.multiline
+                                ? expandedFields.has(feature.id)
+                                : undefined
+                        }
+                        onExpand={
+                            feature.multiline
+                                ? () =>
+                                      setExpandedFields(
+                                          (prev) =>
+                                              new Set([...prev, feature.id]),
+                                      )
+                                : undefined
+                        }
+                        onCollapse={
+                            feature.multiline
+                                ? () =>
+                                      setExpandedFields((prev) => {
+                                          const next = new Set(prev);
+                                          next.delete(feature.id);
+                                          return next;
+                                      })
+                                : undefined
+                        }
                     />
                 );
         }

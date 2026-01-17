@@ -83,3 +83,14 @@ registerFeature({
     type: 'toggle',
     defaultValue: false,
 });
+
+registerFeature({
+    id: 'prefill',
+    title: 'Response prefill',
+    description:
+        'Pre-populate the start of AI responses. Ignored when extended thinking is enabled.',
+    type: 'text',
+    defaultValue: '',
+    multiline: true,
+    placeholder: 'Certainly!',
+});

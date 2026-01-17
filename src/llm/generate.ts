@@ -11,6 +11,7 @@ import {
 } from './citation';
 import { loadContext } from './context';
 import {
+    applyPrefill,
     personaToHeaders,
     personaToProviderOptions,
     personaToTools,
@@ -104,7 +105,12 @@ export async function generateFragments(
             prompt.content += `\n---\n${persona.promptSuffix}`;
         }
     }
-    // TODO prefill (if model supports it)
+    // Apply prefill if model supports it
+    const messagesWithPrefill = applyPrefill(
+        model.config.provider,
+        persona,
+        context,
+    );
 
     let errored = false;
     try {
@@ -112,7 +118,7 @@ export async function generateFragments(
         const result = streamText({
             model: model.model,
             system,
-            messages: context,
+            messages: messagesWithPrefill,
             // Convert features that are implemented as tools to AI SDK's tools
             tools: personaToTools(model.config.provider, persona),
             // Do same for features implemented with provider-specific API options

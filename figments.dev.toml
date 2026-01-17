@@ -16,7 +16,7 @@ provider = "anthropic"
 model = "claude-haiku-4-5"
 displayName = "Default"
 supportedMediaTypes = [ "image/png", "image/jpeg", "image/webp", "application/pdf" ]
-features = [ "thinking", "webSearch", "webFetch" ]
+features = [ "thinking", "webSearch", "webFetch", "prefill" ]
 
 [[models]]
 id = "haiku"
@@ -24,7 +24,7 @@ provider = "anthropic"
 model = "claude-haiku-4-5"
 displayName = "Claude Haiku"
 supportedMediaTypes = [ "image/png", "image/jpeg", "image/webp", "application/pdf" ]
-features = [ "thinking" ]
+features = [ "thinking", "prefill" ]
 
 [[models]]
 id = "sonnet"
@@ -32,7 +32,7 @@ provider = "anthropic"
 model = "claude-sonnet-4-5"
 displayName = "Claude Sonnet"
 supportedMediaTypes = [ "image/png", "image/jpeg", "image/webp", "application/pdf" ]
-features = [ "thinking", "webSearch", "webFetch" ]
+features = [ "thinking", "webSearch", "webFetch", "prefill" ]
 
 [[models]]
 id = "opus"
@@ -40,7 +40,7 @@ provider = "anthropic"
 model = "claude-opus-4-5"
 displayName = "Claude Opus"
 supportedMediaTypes = [ "image/png", "image/jpeg", "image/webp", "application/pdf" ]
-features = [ "thinking", "interleavedThinking", "thinkingBudget", "effort", "webSearch", "webFetch" ]
+features = [ "thinking", "interleavedThinking", "thinkingBudget", "effort", "webSearch", "webFetch", "prefill" ]
 
 [[personas]]
 key = "default"

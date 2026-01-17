@@ -99,12 +99,6 @@ export const PersonaConfig = z.object({
     promptSuffix: z.string().nullish(),
 
     /**
-     * Text to prefill in ALL LLM-authored messages. Not applied to node
-     * content.
-     */
-    prefill: z.string().nullish(),
-
-    /**
      * If set and true, and this persona is defined in user database, it gets
      * auto-imported to newly created spaces.
      */
