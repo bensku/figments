@@ -1,5 +1,7 @@
 import { type AnthropicProviderOptions, anthropic } from '@ai-sdk/anthropic';
-import type { ModelMessage, ToolSet } from 'ai';
+import type { OpenAIResponsesProviderOptions } from '@ai-sdk/openai';
+import type { JSONObject } from '@ai-sdk/provider';
+import type { ModelMessage, Tool, ToolSet } from 'ai';
 import type z from 'zod';
 import type { ModelProvider } from '@/config/schema';
 import type { Persona } from '@/tables/persona';
@@ -21,14 +23,21 @@ export function personaToTools(
 
     switch (provider) {
         case 'anthropic':
+            // AI SDK's types have a bug, but this does work
             if (featureValue(persona, 'webSearch')) {
-                tools.web_search = anthropic.tools.webSearch_20250305();
+                tools.web_search = anthropic.tools.webSearch_20250305() as Tool;
             }
             if (featureValue(persona, 'webFetch')) {
-                tools.web_fetch = anthropic.tools.webFetch_20250910();
+                tools.web_fetch = anthropic.tools.webFetch_20250910() as Tool;
             }
             break;
-        // TODO OpenAI
+        case 'openai':
+            // TODO broken due to schema issue
+            // AI_TypeValidationError: Type validation failed: Value: {"action":{"type":"search","query":"weather: Helsinki, Finland"},"sources":[{"type":"api","name":"oai-weather"}]}.
+            // if (featureValue(persona, 'webSearch')) {
+            //     tools.web_search = openai.tools.webSearch();
+            // }
+            break;
         default:
             break;
     }
@@ -46,7 +55,7 @@ export function personaToTools(
 export function personaToProviderOptions(
     provider: z.output<typeof ModelProvider>,
     persona: Persona,
-) {
+): Record<string, JSONObject> {
     switch (provider) {
         case 'anthropic': {
             const thinking = featureValue(persona, 'thinking') === true;
@@ -69,7 +78,33 @@ export function personaToProviderOptions(
                 anthropic: options,
             };
         }
-        // TODO OpenAI
+        case 'openai': {
+            const reasoning =
+                featureValue(persona, 'alwaysThinking') === true ||
+                featureValue(persona, 'thinking') === true;
+            const options: OpenAIResponsesProviderOptions = {
+                store: false, // We'll do context management on Figments end anyway
+                reasoningSummary: 'detailed', // TODO configurable
+                promptCacheRetention:
+                    featureValue(persona, 'extendedPromptCaching') === true
+                        ? '24h'
+                        : undefined,
+                forceReasoning: reasoning,
+                // Reasoning on newer OpenAI models is optional, and disabled with reasoningEffort none
+                reasoningEffort: reasoning
+                    ? (featureValue(persona, 'thinkingEffort') as string)
+                    : 'none',
+                textVerbosity: featureValue(persona, 'verbosity') as
+                    | 'low'
+                    | 'medium'
+                    | 'high',
+                // Everything blows up if we don't include real (encrypted) reasoning, but try to pass just the summaries
+                include: ['reasoning.encrypted_content'],
+            };
+            return {
+                openai: options,
+            };
+        }
     }
 }
 

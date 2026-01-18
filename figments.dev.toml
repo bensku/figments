@@ -32,7 +32,7 @@ provider = "anthropic"
 model = "claude-sonnet-4-5"
 displayName = "Claude Sonnet"
 supportedMediaTypes = [ "image/png", "image/jpeg", "image/webp", "application/pdf" ]
-features = [ "thinking", "webSearch", "webFetch", "prefill" ]
+features = [ "thinking", "interleavedThinking", "thinkingBudget", "webSearch", "webFetch", "prefill" ]
 
 [[models]]
 id = "opus"
@@ -41,6 +41,22 @@ model = "claude-opus-4-5"
 displayName = "Claude Opus"
 supportedMediaTypes = [ "image/png", "image/jpeg", "image/webp", "application/pdf" ]
 features = [ "thinking", "interleavedThinking", "thinkingBudget", "effort", "webSearch", "webFetch", "prefill" ]
+
+[[models]]
+id = "gpt-5-mini"
+provider = "openai"
+model = "gpt-5-mini"
+displayName = "GPT-5 mini"
+supportedMediaTypes = [ "image/png", "image/jpeg", "image/webp" ]
+features = [ "alwaysThinking", "thinkingEffort" ]
+
+[[models]]
+id = "gpt-5-2"
+provider = "openai"
+model = "gpt-5.2"
+displayName = "GPT-5.2"
+supportedMediaTypes = [ "image/png", "image/jpeg", "image/webp" ]
+features = [ "thinking", "thinkingEffort" ]
 
 [[personas]]
 key = "default"

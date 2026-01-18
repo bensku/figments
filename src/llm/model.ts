@@ -39,7 +39,7 @@ function createLanguageModel(config: ModelConfig): LanguageModel {
                 baseURL: config.baseUrl,
                 apiKey,
             });
-            return openai(config.model);
+            return openai.responses(config.model);
         }
     }
 }

@@ -94,3 +94,24 @@ registerFeature({
     multiline: true,
     placeholder: 'Certainly!',
 });
+
+registerFeature({
+    id: 'verbosity',
+    title: 'Verbosity',
+    description: 'Verbosity of generated responses',
+    type: 'choice',
+    choices: [
+        { id: 'low', title: 'Low' },
+        { id: 'medium', title: 'Medium' },
+        { id: 'high', title: 'High' },
+    ],
+    defaultValue: 'medium',
+});
+
+registerFeature({
+    id: 'extendedPromptCaching',
+    title: 'Extended prompt caching',
+    description: 'Cache prompts on LLM provider end for up to 24 hours',
+    type: 'dummy',
+    defaultValue: true,
+});
