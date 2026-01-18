@@ -51,10 +51,36 @@ supportedMediaTypes = [ "image/png", "image/jpeg", "image/webp" ]
 features = [ "alwaysThinking", "thinkingEffort" ]
 
 [[models]]
-id = "gpt-5-2"
+id = "gpt-5.2"
 provider = "openai"
 model = "gpt-5.2"
 displayName = "GPT-5.2"
+supportedMediaTypes = [ "image/png", "image/jpeg", "image/webp" ]
+features = [ "thinking", "thinkingEffort" ]
+
+[[models]]
+id = "kimi-k2"
+provider = "openaiCompatible"
+baseUrl = "https://openrouter.ai/api/v1"
+apiKeyEnv = "OPENROUTER_API_KEY"
+model = "moonshotai/kimi-k2-thinking"
+displayName = "Kimi K2 thinking (OR compat)"
+supportedMediaTypes = []
+features = [ "alwaysThinking" ]
+
+[[models]]
+id = "kimi-k2-or"
+provider = "openrouter"
+model = "moonshotai/kimi-k2-thinking"
+displayName = "Kimi K2 thinking (OR)"
+supportedMediaTypes = []
+features = [ "alwaysThinking" ]
+
+[[models]]
+id = "gemini-or"
+provider = "openrouter"
+model = "google/gemini-3-flash-preview"
+displayName = "Gemini 3 Flash Preview (OR)"
 supportedMediaTypes = [ "image/png", "image/jpeg", "image/webp" ]
 features = [ "thinking", "thinkingEffort" ]
 

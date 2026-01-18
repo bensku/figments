@@ -96,7 +96,7 @@ export async function generateFragments(
 
     // Figure what we'll be feeding to the LLM
     const system = persona.systemPrompt ?? undefined;
-    const context = await loadContext(doc, node, model);
+    const context = await loadContext(doc, node, model, {});
 
     // Patch context with persona's options
     const prompt = context[context.length - 1];
@@ -158,10 +158,17 @@ export async function generateFragments(
                     }
                     break;
                 case 'reasoning-end':
-                    fragments.push(current);
+                    if (current) {
+                        fragments.push(current);
+                    }
                     current = null;
                     break;
                 case 'text-start':
+                    // openaiCompatible may sometimes produce reasoning-end in wrong place
+                    if (current && current.data.type === 'thinking') {
+                        fragments.push(current);
+                        current = null;
+                    }
                     currentBlockCitations = []; // Reset for new text block
                     current = newFragment({
                         type: 'text',
@@ -320,7 +327,10 @@ export async function generateFragments(
     // Load context again, this time including the newly created message
     // TODO do not load context again; can be expensive if there are attachments!
     // FIXME if choice and summary models have different supported file types from main model, things break - badly
-    const fullContext = await loadContext(doc, node, model, true);
+    const fullContext = await loadContext(doc, node, model, {
+        includeTarget: true,
+        filterReasoning: true, // Unnecessary context bloat + probably unsupported to use reasoning across models
+    });
 
     // Generate pre-determined choices
     if (!errored) {

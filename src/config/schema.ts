@@ -15,7 +15,7 @@ export const AuthConfig = z.discriminatedUnion('type', [
     }),
 ]);
 
-export const ModelProvider = z.enum(['anthropic', 'openai']);
+export const ModelProvider = z.enum(['anthropic', 'openai', 'openaiCompatible', 'openrouter']);
 
 export const ModelConfig = z.object({
     /**

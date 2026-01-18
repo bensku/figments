@@ -9,11 +9,14 @@ export async function loadContext(
     doc: Y.Doc,
     targetNode: Row<typeof NodeTable>,
     model: Model,
-    includeTarget = false,
+    options: {
+        includeTarget?: boolean;
+        filterReasoning?: boolean;
+    }
 ): Promise<ModelMessage[]> {
     // Get a chain of nodes from root to target
     const nodes = [];
-    if (includeTarget) {
+    if (options.includeTarget) {
         nodes.push(targetNode);
     }
 
@@ -38,7 +41,7 @@ export async function loadContext(
             and(eq('node', node.key), eq('role', 'main')),
         );
         fragments.sort((a, b) => a.createdAt - b.createdAt);
-        futures.push(toMessage(node.role, fragments, model));
+        futures.push(toMessage(node.role, fragments, model, !!options.filterReasoning));
     }
     const messages = await Promise.all(futures);
 
@@ -57,11 +60,11 @@ async function toMessage(
     creator: Row<typeof NodeTable>['role'],
     fragments: Row<typeof FragmentTable>[],
     model: Model,
+    filterReasoning: boolean
 ): Promise<ModelMessage> {
     const allParts = await Promise.all(fragments.map((f) => toPart(f, model)));
-    // Filter out tool calls and tool results - they were already consumed
-    // during the original generation; the text response is what matters
-    const parts = allParts;
+    // Filter out reasoning if requested
+    const parts = !filterReasoning ? allParts : allParts.filter(part => part.type !== 'reasoning');
 
     switch (creator) {
         case 'user':

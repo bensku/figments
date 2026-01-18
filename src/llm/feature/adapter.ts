@@ -105,6 +105,23 @@ export function personaToProviderOptions(
                 openai: options,
             };
         }
+        case 'openrouter': {
+            const reasoning =
+                featureValue(persona, 'alwaysThinking') === true ||
+                featureValue(persona, 'thinking') === true;
+            const options = {
+                reasoning: {
+                    enabled: reasoning,
+                    effort: featureValue(persona, 'thinkingEffort'),
+                    max_tokens: featureValue(persona, 'thinkingBudget')
+                }
+            }
+            return {
+                openai: options,
+            };
+        }
+        default:
+            return {};
     }
 }
 
