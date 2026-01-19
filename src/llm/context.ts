@@ -2,17 +2,21 @@ import { and, eq, getKey, type Row, select } from '@bensku/y-query';
 import type { AssistantContent, ModelMessage, UserContent } from 'ai';
 import type * as Y from 'yjs';
 import { FragmentTable, NodeTable } from '@/tables/node';
-import { tryConvertToText as convertToText } from './attachment';
+import {
+    tryConvertToText as convertToText,
+    loadAttachment,
+} from './attachment';
 import type { Model } from './model';
 
 export async function loadContext(
+    userId: string,
     doc: Y.Doc,
     targetNode: Row<typeof NodeTable>,
     model: Model,
     options: {
         includeTarget?: boolean;
         filterReasoning?: boolean;
-    }
+    },
 ): Promise<ModelMessage[]> {
     // Get a chain of nodes from root to target
     const nodes = [];
@@ -41,7 +45,15 @@ export async function loadContext(
             and(eq('node', node.key), eq('role', 'main')),
         );
         fragments.sort((a, b) => a.createdAt - b.createdAt);
-        futures.push(toMessage(node.role, fragments, model, !!options.filterReasoning));
+        futures.push(
+            toMessage(
+                userId,
+                node.role,
+                fragments,
+                model,
+                !!options.filterReasoning,
+            ),
+        );
     }
     const messages = await Promise.all(futures);
 
@@ -57,14 +69,19 @@ export async function loadContext(
 }
 
 async function toMessage(
+    userId: string,
     creator: Row<typeof NodeTable>['role'],
     fragments: Row<typeof FragmentTable>[],
     model: Model,
-    filterReasoning: boolean
+    filterReasoning: boolean,
 ): Promise<ModelMessage> {
-    const allParts = await Promise.all(fragments.map((f) => toPart(f, model)));
+    const allParts = await Promise.all(
+        fragments.map((f) => toPart(userId, f, model)),
+    );
     // Filter out reasoning if requested
-    const parts = !filterReasoning ? allParts : allParts.filter(part => part.type !== 'reasoning');
+    const parts = !filterReasoning
+        ? allParts
+        : allParts.filter((part) => part.type !== 'reasoning');
 
     switch (creator) {
         case 'user':
@@ -80,7 +97,11 @@ async function toMessage(
     }
 }
 
-async function toPart(fragment: Row<typeof FragmentTable>, model: Model) {
+async function toPart(
+    userId: string,
+    fragment: Row<typeof FragmentTable>,
+    model: Model,
+) {
     const data = fragment.data;
     switch (data.type) {
         case 'text':
@@ -116,11 +137,18 @@ async function toPart(fragment: Row<typeof FragmentTable>, model: Model) {
             };
         case 'file': {
             // TODO optionally use presigned URLs to avoid downloading data in memory
-            const content = Bun.s3.file(`uploads/${data.attachmentId}`);
+            const content = await loadAttachment(
+                userId,
+                data.attachmentId,
+                data.mediaType,
+            );
+            if (!content) {
+                throw new Error(`missing file ${data.attachmentId}`);
+            }
             if (model.config.supportedMediaTypes.includes(data.mediaType)) {
                 return {
                     type: 'file',
-                    data: await content.arrayBuffer(),
+                    data: content,
                     mediaType: data.mediaType,
                     filename: data.filename,
                     // Enable citations for documents (PDFs)
@@ -133,7 +161,7 @@ async function toPart(fragment: Row<typeof FragmentTable>, model: Model) {
                 };
             } else {
                 const text = convertToText(
-                    await content.arrayBuffer(),
+                    content,
                     data.mediaType,
                     data.filename,
                 );

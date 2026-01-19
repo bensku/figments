@@ -31,7 +31,7 @@ function createLanguageModel(config: ModelConfig): LanguageModel {
                 baseURL: config.baseUrl,
                 apiKey,
             });
-            return anthropic(config.model)
+            return anthropic(config.model);
         }
         // OpenAI responses API. OpenAI-compatible providers typically DO NOT support this (at least, not well)
         case 'openai': {
@@ -45,7 +45,9 @@ function createLanguageModel(config: ModelConfig): LanguageModel {
         // But for everything else, it is as close to a standard as there is
         case 'openaiCompatible': {
             if (!config.baseUrl) {
-                throw new Error('custom openapiCompatible providers need API baseUrl!');
+                throw new Error(
+                    'custom openapiCompatible providers need API baseUrl!',
+                );
             }
             const custom = createOpenAICompatible({
                 name: 'custom',
@@ -59,8 +61,8 @@ function createLanguageModel(config: ModelConfig): LanguageModel {
             const openrouter = createOpenAICompatible({
                 name: 'openrouter',
                 baseURL: config.baseUrl ?? 'https://openrouter.ai/api/v1',
-                apiKey: apiKey ?? process.env.OPENROUTER_API_KEY
-            })
+                apiKey: apiKey ?? process.env.OPENROUTER_API_KEY,
+            });
             return openrouter(config.model);
         }
     }
@@ -69,10 +71,10 @@ function createLanguageModel(config: ModelConfig): LanguageModel {
 function wrapModel(model: LanguageModel) {
     if (process.env.NODE_ENV !== 'production') {
         return wrapLanguageModel({
-                // biome-ignore lint/suspicious/noExplicitAny: this needs LanguageModelV3, which isn't exported
-                model: model as any,
-                middleware: devToolsMiddleware(),
-            });
+            // biome-ignore lint/suspicious/noExplicitAny: this needs LanguageModelV3, which isn't exported
+            model: model as any,
+            middleware: devToolsMiddleware(),
+        });
     }
     return model;
 }

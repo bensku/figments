@@ -1,7 +1,13 @@
 import type { ServerWebSocket } from 'bun';
 import { requireUser } from './auth/hook';
+import type { User } from './auth/user';
 import { CONFIG } from './config';
 import index from './index.html';
+import {
+    isSafeMimeType,
+    loadAttachment,
+    saveAttachment,
+} from './llm/attachment';
 import { modelFeatures } from './llm/feature';
 import { hocuspocus } from './sync/server';
 import { WsAdapter } from './sync/ws-adapter';
@@ -17,7 +23,7 @@ interface WebSocketData {
  * Create a minimal IncomingMessage-like object from a Bun Request.
  * Hocuspocus only needs .headers and .url properties.
  */
-function toIncomingMessage(request: Request) {
+function toIncomingMessage(request: Request, user: User) {
     const url = new URL(request.url);
     const headers: Record<string, string> = {};
     request.headers.forEach((value, key) => {
@@ -26,6 +32,7 @@ function toIncomingMessage(request: Request) {
     return {
         headers,
         url: url.pathname + url.search,
+        user,
     };
 }
 
@@ -35,11 +42,11 @@ const server = Bun.serve({
 
         // Main sync API - most things use this
         '/ws': async (req, server) => {
-            requireUser(req);
+            const user = requireUser(req);
             if (
                 server.upgrade(req, {
                     data: {
-                        request: toIncomingMessage(req),
+                        request: toIncomingMessage(req, user),
                         adapter: new WsAdapter(),
                     },
                 })
@@ -74,56 +81,51 @@ const server = Bun.serve({
 
         // Serve uploaded attachments
         '/api/attachment/:id': async (req) => {
-            requireUser(req);
-            const id = req.params.id;
-            const file = Bun.s3.file(`uploads/${id}`);
-            if (!(await file.exists())) {
-                return new Response('Not found', { status: 404 });
-            }
-            // Get content type from query param (stored in fragment data)
-            // Only allow safe content types to prevent XSS
+            const user = requireUser(req);
             const url = new URL(req.url);
-            const requestedType = url.searchParams.get('type');
-            // Note: SVG excluded due to XSS risk (can contain JavaScript)
-            const safeTypes = [
-                'image/png',
-                'image/jpeg',
-                'image/gif',
-                'image/webp',
-                'application/pdf',
-                'audio/mpeg',
-                'audio/wav',
-                'video/mp4',
-                'video/webm',
-            ];
-            const contentType =
-                requestedType && safeTypes.includes(requestedType)
-                    ? requestedType
-                    : 'application/octet-stream';
-            // Read file content to create Response with headers
-            const content = await file.arrayBuffer();
+
+            // y-query data describes what type this is
+            const mimeType = url.searchParams.get('type');
+            if (!isSafeMimeType(mimeType)) {
+                // But permit only safe types to prevent users from XSSing themself
+                // in case they're somehow convinced to upload dangerous attachments
+                // (plus this is very important if sharing is ever implemented!)
+                return new Response('type not allowed', { status: 400 });
+            }
+            const content = await loadAttachment(
+                user.id,
+                req.params.id,
+                mimeType,
+            );
+            if (content === null) {
+                return new Response('not found', { status: 404 });
+            }
+
             return new Response(content, {
-                headers: { 'Content-Type': contentType },
+                headers: { 'Content-Type': mimeType },
             });
         },
 
         // Allow attachment uploads!
         '/api/attachment/upload': async (req) => {
-            requireUser(req);
+            const user = requireUser(req);
             const formData = await req.formData();
             const file = formData.get('file');
-            if (!file) {
+            if (!file || typeof file === 'string') {
                 return Response.json(
-                    { error: 'missing file' },
+                    { error: 'missing file or type' },
+                    { status: 400 },
+                );
+            }
+            const mimeType = file.type;
+            if (!isSafeMimeType(mimeType)) {
+                return Response.json(
+                    { error: 'disallowed mime type' },
                     { status: 400 },
                 );
             }
 
-            // Upload to S3 with random id
-            const id = crypto.randomUUID();
-            Bun.s3.write(`uploads/${id}`, file);
-
-            // Return id to caller!
+            const id = await saveAttachment(user.id, mimeType, file);
             return Response.json({ id });
         },
     },

@@ -14,7 +14,7 @@ import {
 } from '@/components/settings/persona/constants';
 import type { PersonaSource } from '@/components/settings/persona/persona-card';
 import { useInstance } from '@/context/instance';
-import { useSpaceDoc } from '@/context/space';
+import { useSpace, useSpaceDoc } from '@/context/space';
 import { useUser } from '@/context/user';
 import { useAutoExpandingTextarea } from '@/hooks/useAutoExpandingTextarea';
 import { ChoiceTable, type NodeTable } from '@/tables/node';
@@ -56,6 +56,7 @@ export function MessageInput({
     selectNode: (id: string | null) => void;
 }) {
     const doc = useSpaceDoc();
+    const { provider } = useSpace();
     const [inputText, setInputText] = useState('');
     const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
     const [isDragging, setIsDragging] = useState(false);
@@ -159,7 +160,7 @@ export function MessageInput({
         enabledPersonas.includes(value.key),
     );
 
-    const sendReply = useSendMessage(doc, node, personas, selectNode);
+    const sendReply = useSendMessage(doc, provider, node, personas, selectNode);
 
     const addFiles = (files: FileList | File[]) => {
         const newFiles: PendingFile[] = Array.from(files).map((file) => ({
@@ -282,7 +283,8 @@ export function MessageInput({
     const canSend =
         hasContent &&
         personas.length > 0 &&
-        !pendingFiles.some((f) => f.uploading);
+        !pendingFiles.some((f) => f.uploading) &&
+        provider !== null;
 
     return (
         <div className="flex gap-3">

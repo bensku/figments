@@ -1,5 +1,7 @@
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import * as Y from 'yjs';
+import type { z } from 'zod';
+import type { ClientMessage } from './messages';
 
 interface HocuspocusConfig {
     /** Document name for the WebSocket connection */
@@ -45,4 +47,14 @@ export function createHocuspocusConnection({
             doc.destroy();
         },
     };
+}
+
+/**
+ * Send a stateless message to the server via Hocuspocus.
+ */
+export function sendMessage(
+    provider: HocuspocusProvider,
+    message: z.infer<typeof ClientMessage>,
+) {
+    provider.sendStateless(JSON.stringify(message));
 }

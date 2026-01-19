@@ -12,7 +12,7 @@
         "@aws-sdk/client-s3": "^3.954.0",
         "@bensku/y-query": "^0.0.8",
         "@bensku/y-query-react": "^0.0.8",
-        "@hocuspocus/extension-s3": "^3.4.3",
+        "@hocuspocus/extension-database": "^3.4.3",
         "@hocuspocus/provider": "^3.4.3",
         "@hocuspocus/server": "^3.4.3",
         "@tailwindcss/typography": "^0.5.19",
@@ -212,8 +212,6 @@
     "@hocuspocus/common": ["@hocuspocus/common@3.4.3", "", { "dependencies": { "lib0": "^0.2.87" } }, "sha512-wnBBO9sWcVAoUPEXN1qO+zk3HaEF9VTemxB6kjuuH6e1dHnD0v12m4P4X1wiZVhmMIX/PMl/fu3MGtYWQJz8gA=="],
 
     "@hocuspocus/extension-database": ["@hocuspocus/extension-database@3.4.3", "", { "dependencies": { "@hocuspocus/server": "^3.4.3" }, "peerDependencies": { "yjs": "^13.6.8" } }, "sha512-XVXHuPi3DEaZ7fbnTVDDsLYiWCNWB/zkZ3/BQ4YYtZdP8oZNztYe1JoNk6VuzdMDky0cNr1ZCXb1VRlLc0toVA=="],
-
-    "@hocuspocus/extension-s3": ["@hocuspocus/extension-s3@3.4.3", "", { "dependencies": { "@aws-sdk/client-s3": "^3.0.0", "@hocuspocus/extension-database": "^3.4.3", "kleur": "^4.1.4" } }, "sha512-+czUgcCBuosikgwVVUm+5GnnP0izKdD1hQjeSe7ljf52u68LxIaiIY7m8qjJHYLQde77/12dutUa3V43oyzZGw=="],
 
     "@hocuspocus/provider": ["@hocuspocus/provider@3.4.3", "", { "dependencies": { "@hocuspocus/common": "^3.4.3", "@lifeomic/attempt": "^3.0.2", "lib0": "^0.2.87", "ws": "^8.17.1" }, "peerDependencies": { "y-protocols": "^1.0.6", "yjs": "^13.6.8" } }, "sha512-zt+UgVXGsEQrqnDZgavc2PT9yKJjmVjV+5YxvhlmFVFLVORqawT4l601aKmLPhvyK97un4ZApZ5rso8iO6crWg=="],
 

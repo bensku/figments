@@ -31,7 +31,7 @@ export function UserProvider({
 
     useEffect(() => {
         const connection = createHocuspocusConnection({
-            name: `user.${userId}`,
+            name: `${userId}/config`,
         });
         setUserDoc(connection.doc);
 

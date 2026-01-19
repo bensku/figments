@@ -113,9 +113,9 @@ export function personaToProviderOptions(
                 reasoning: {
                     enabled: reasoning,
                     effort: featureValue(persona, 'thinkingEffort'),
-                    max_tokens: featureValue(persona, 'thinkingBudget')
-                }
-            }
+                    max_tokens: featureValue(persona, 'thinkingBudget'),
+                },
+            };
             return {
                 openai: options,
             };

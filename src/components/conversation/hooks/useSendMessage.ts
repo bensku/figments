@@ -1,5 +1,7 @@
 import { getKey, type Row, upsert } from '@bensku/y-query';
+import type { HocuspocusProvider } from '@hocuspocus/provider';
 import * as Y from 'yjs';
+import { sendMessage } from '@/sync/hocuspocus';
 import { FragmentTable, NodeTable } from '@/tables/node';
 import type { PersonaTable } from '@/tables/persona';
 
@@ -11,11 +13,13 @@ export type FileAttachment = {
 
 export function useSendMessage(
     doc: Y.Doc,
+    provider: HocuspocusProvider | null,
     parentNode: Row<typeof NodeTable> | null,
     personas: Row<typeof PersonaTable>[],
     selectNode: (id: string | null) => void,
 ) {
     const sendReply = (text: string, files?: FileAttachment[]) => {
+        if (!provider) return;
         if (!text.trim() && (!files || files.length === 0)) return;
 
         const parentId = parentNode?.key ?? 'root';
@@ -84,6 +88,15 @@ export function useSendMessage(
                 summary: '',
                 completed: false,
             });
+
+            // Request generation via stateless message
+            sendMessage(provider, {
+                type: 'generate',
+                node: replyKey,
+                role: 'main',
+                force: false,
+            });
+
             if (personas.length === 1) {
                 nodeToSelect = replyKey;
             }
