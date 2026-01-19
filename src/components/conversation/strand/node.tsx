@@ -1,11 +1,21 @@
-import type { Row } from '@bensku/y-query';
-import { eq } from '@bensku/y-query';
+import { eq, type Row, upsert } from '@bensku/y-query';
 import { useQuery, useRow } from '@bensku/y-query-react';
-import { Crosshair } from 'lucide-react';
-import { memo, useMemo, useState } from 'react';
-import { useSpaceDoc } from '@/context/space';
+import { Crosshair, RefreshCw, Sparkles, Trash2 } from 'lucide-react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import {
+    sourceBadgeStyles,
+    sourceLabels,
+} from '@/components/settings/persona/constants';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useSpace, useSpaceDoc } from '@/context/space';
+import { useAvailablePersonas } from '@/hooks/useAvailablePersonas';
 import { usePersona } from '@/hooks/usePersonas';
-import { FragmentTable, NodeTable } from '@/tables/node';
+import { sendMessage } from '@/sync/hocuspocus';
+import {
+    deleteNodeWithDescendants,
+    FragmentTable,
+    NodeTable,
+} from '@/tables/node';
 import { hashStringToHue } from '@/utils/colors';
 import {
     FragmentRenderer,
@@ -112,9 +122,26 @@ export const StrandNode = memo(function StrandNode({
     focusNode,
 }: StrandNodeProps) {
     const doc = useSpaceDoc();
+    const { provider } = useSpace();
     const node = useRow(doc, NodeTable, id, 'content');
     const persona = usePersona(node?.author);
     const [isHovered, setIsHovered] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
+    const [showPersonaPicker, setShowPersonaPicker] = useState(false);
+
+    // Get available personas for generate reply
+    const { allPersonasWithSource } = useAvailablePersonas(doc);
+
+    // Check if node has children (for showing "generate reply" on user messages)
+    const children = useQuery(
+        doc,
+        NodeTable,
+        () => eq('parentId', id),
+        [id],
+        'content',
+    );
+    const hasChildren = children.length > 0;
 
     // Get node's fragments (content)
     const fragments = useQuery(
@@ -137,12 +164,69 @@ export const StrandNode = memo(function StrandNode({
     }
 
     const isUser = node.role === 'user';
+    const isLlm = node.role === 'llm';
+    const canRegenerate = isLlm && provider !== null;
+    const canGenerateReply = isUser && !hasChildren && provider !== null;
 
     // Generate hue from author name for LLM nodes (same as tree view)
     const llmHue = !isUser ? hashStringToHue(node.author || 'default') : 0;
 
     // Color for selected indicator border (same as dot indicator)
     const indicatorColor = isUser ? '#60a5fa' : `hsl(${llmHue}, 60%, 55%)`;
+
+    const handleGenerateReply = (personaKey: string) => {
+        if (!provider) return;
+
+        // Create LLM node as child
+        const replyKey = crypto.randomUUID();
+        upsert(doc, NodeTable, {
+            key: replyKey,
+            parentId: id,
+            role: 'llm',
+            createdAt: Date.now(),
+            author: personaKey,
+            summary: '',
+            completed: false,
+        });
+
+        // Request generation
+        sendMessage(provider, {
+            type: 'generate',
+            node: replyKey,
+            role: 'main',
+            force: false,
+        });
+
+        // Focus on the new reply
+        focusNode(replyKey);
+        setShowPersonaPicker(false);
+    };
+
+    const handleRegenerate = () => {
+        if (!provider) return;
+        sendMessage(provider, {
+            type: 'generate',
+            node: id,
+            role: 'main',
+            force: true,
+        });
+    };
+
+    const handleRegenerateClick = () => {
+        // If still generating, ask for confirmation (might be stuck or active)
+        if (!node.completed) {
+            setShowRegenerateConfirm(true);
+        } else {
+            handleRegenerate();
+        }
+    };
+
+    const handleDelete = () => {
+        const parentId = deleteNodeWithDescendants(doc, id);
+        // Navigate to parent after deletion
+        focusNode(parentId);
+        setShowDeleteConfirm(false);
+    };
 
     return (
         // biome-ignore lint/a11y/noStaticElementInteractions: Hover tracking only
@@ -255,20 +339,186 @@ export const StrandNode = memo(function StrandNode({
                 </div>
             </div>
 
-            {/* Focus button - appears on hover, positioned absolutely */}
+            {/* Action buttons - appear on hover, positioned absolutely */}
             {isHovered && (
-                <button
-                    type="button"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        focusNode(id);
-                    }}
-                    className="absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-blue-100 rounded-full text-gray-400 hover:text-blue-600 transition-colors shadow-sm border border-gray-200"
-                    title="Focus on this branch"
-                >
-                    <Crosshair className="w-4 h-4" aria-hidden="true" />
-                </button>
+                <div className="absolute top-2 right-2 flex gap-1">
+                    {/* Generate reply button - user messages with no children only */}
+                    {canGenerateReply && (
+                        <div className="relative">
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowPersonaPicker(!showPersonaPicker);
+                                }}
+                                className="p-1.5 bg-white/90 hover:bg-purple-100 rounded-full text-gray-400 hover:text-purple-600 transition-colors shadow-sm border border-gray-200"
+                                title="Generate reply"
+                            >
+                                <Sparkles
+                                    className="w-4 h-4"
+                                    aria-hidden="true"
+                                />
+                            </button>
+                            {/* Persona picker dropdown */}
+                            {showPersonaPicker && (
+                                <PersonaPicker
+                                    personas={allPersonasWithSource}
+                                    onSelect={handleGenerateReply}
+                                    onClose={() => setShowPersonaPicker(false)}
+                                />
+                            )}
+                        </div>
+                    )}
+                    {/* Regenerate button - LLM messages only */}
+                    {canRegenerate && (
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleRegenerateClick();
+                            }}
+                            className="p-1.5 bg-white/90 hover:bg-blue-100 rounded-full text-gray-400 hover:text-blue-600 transition-colors shadow-sm border border-gray-200"
+                            title="Regenerate response"
+                        >
+                            <RefreshCw className="w-4 h-4" aria-hidden="true" />
+                        </button>
+                    )}
+                    {/* Delete button */}
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setShowDeleteConfirm(true);
+                        }}
+                        className="p-1.5 bg-white/90 hover:bg-red-100 rounded-full text-gray-400 hover:text-red-600 transition-colors shadow-sm border border-gray-200"
+                        title="Delete message"
+                    >
+                        <Trash2 className="w-4 h-4" aria-hidden="true" />
+                    </button>
+                    {/* Focus button */}
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            focusNode(id);
+                        }}
+                        className="p-1.5 bg-white/90 hover:bg-blue-100 rounded-full text-gray-400 hover:text-blue-600 transition-colors shadow-sm border border-gray-200"
+                        title="Focus on this branch"
+                    >
+                        <Crosshair className="w-4 h-4" aria-hidden="true" />
+                    </button>
+                </div>
             )}
+
+            {/* Delete confirmation dialog */}
+            <ConfirmDialog
+                isOpen={showDeleteConfirm}
+                onConfirm={handleDelete}
+                onCancel={() => setShowDeleteConfirm(false)}
+                title="Delete message?"
+                message="This will permanently delete this message and all replies."
+                confirmLabel="Delete"
+                confirmVariant="danger"
+            />
+
+            {/* Regenerate confirmation dialog (for stuck/in-progress messages) */}
+            <ConfirmDialog
+                isOpen={showRegenerateConfirm}
+                onConfirm={() => {
+                    handleRegenerate();
+                    setShowRegenerateConfirm(false);
+                }}
+                onCancel={() => setShowRegenerateConfirm(false)}
+                title="Regenerate message?"
+                message="This message appears to still be generating. Regenerating will restart the generation from scratch."
+                confirmLabel="Regenerate"
+                confirmVariant="primary"
+            />
         </div>
     );
 });
+
+/**
+ * Dropdown picker for selecting a persona to generate a reply.
+ */
+function PersonaPicker({
+    personas,
+    onSelect,
+    onClose,
+}: {
+    personas: { persona: { key: string; title: string }; source: string }[];
+    onSelect: (personaKey: string) => void;
+    onClose: () => void;
+}) {
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close on click outside
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (
+                dropdownRef.current &&
+                !dropdownRef.current.contains(e.target as Node)
+            ) {
+                onClose();
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () =>
+            document.removeEventListener('mousedown', handleClickOutside);
+    }, [onClose]);
+
+    // Close on escape
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+        document.addEventListener('keydown', handleEscape);
+        return () => document.removeEventListener('keydown', handleEscape);
+    }, [onClose]);
+
+    return (
+        <div
+            ref={dropdownRef}
+            className="absolute right-0 top-full mt-1 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={() => {}}
+            role="menu"
+        >
+            <div className="px-3 py-1.5 text-xs font-medium text-gray-500 border-b border-gray-100">
+                Generate reply with...
+            </div>
+            {personas.length === 0 ? (
+                <div className="px-3 py-2 text-sm text-gray-500">
+                    No personas available
+                </div>
+            ) : (
+                personas.map(({ persona, source }) => (
+                    <button
+                        key={persona.key}
+                        type="button"
+                        onClick={() => onSelect(persona.key)}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 text-left"
+                        role="menuitem"
+                    >
+                        <span className="font-medium truncate flex-1">
+                            {persona.title || persona.key}
+                        </span>
+                        <span
+                            className={`px-1.5 py-0.5 text-xs font-medium rounded-full ${
+                                sourceBadgeStyles[
+                                    source as keyof typeof sourceBadgeStyles
+                                ] ?? 'bg-gray-100 text-gray-600'
+                            }`}
+                        >
+                            {sourceLabels[
+                                source as keyof typeof sourceLabels
+                            ] ?? source}
+                        </span>
+                    </button>
+                ))
+            )}
+        </div>
+    );
+}

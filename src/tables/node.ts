@@ -1,4 +1,4 @@
-import { table } from '@bensku/y-query';
+import { eq, getKey, remove, select, table } from '@bensku/y-query';
 import * as Y from 'yjs';
 import z from 'zod';
 
@@ -163,3 +163,48 @@ export const ChoiceTable = table(
         takesTo: z.string().optional(),
     }),
 );
+
+/**
+ * Deletes a node and all its descendants (cascade delete).
+ * Also removes all fragments and choices associated with deleted nodes.
+ * @param doc The Y.Doc to operate on
+ * @param nodeKey Key of the node to delete
+ * @returns The parent ID of the deleted node (null if parent was 'root')
+ */
+export function deleteNodeWithDescendants(
+    doc: Y.Doc,
+    nodeKey: string,
+): string | null {
+    // Get parent before deletion for navigation
+    const node = getKey(doc, NodeTable, nodeKey);
+    const parentId = node?.parentId ?? null;
+
+    // Collect all node keys to delete (BFS traversal)
+    const toDelete: string[] = [nodeKey];
+    let i = 0;
+    while (i < toDelete.length) {
+        const currentKey = toDelete[i];
+        if (currentKey) {
+            const children = select(doc, NodeTable, eq('parentId', currentKey));
+            for (const child of children) {
+                toDelete.push(child.key);
+            }
+        }
+        i++;
+    }
+
+    // Delete fragments, choices, then nodes
+    for (const key of toDelete) {
+        const fragments = select(doc, FragmentTable, eq('node', key));
+        for (const fragment of fragments) {
+            remove(doc, FragmentTable, fragment.key);
+        }
+        const choices = select(doc, ChoiceTable, eq('node', key));
+        for (const choice of choices) {
+            remove(doc, ChoiceTable, choice.key);
+        }
+        remove(doc, NodeTable, key);
+    }
+
+    return parentId === 'root' ? null : parentId;
+}

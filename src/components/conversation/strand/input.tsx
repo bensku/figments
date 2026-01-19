@@ -1,4 +1,4 @@
-import { any, eq, type Row, update, upsert } from '@bensku/y-query';
+import { eq, type Row, update, upsert } from '@bensku/y-query';
 import { useQuery, useRow } from '@bensku/y-query-react';
 import {
     ChevronDown,
@@ -7,22 +7,20 @@ import {
     Send,
     X,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     sourceBadgeStyles,
     sourceLabels,
 } from '@/components/settings/persona/constants';
-import type { PersonaSource } from '@/components/settings/persona/persona-card';
-import { useInstance } from '@/context/instance';
 import { useSpace, useSpaceDoc } from '@/context/space';
 import { useUser } from '@/context/user';
 import { useAutoExpandingTextarea } from '@/hooks/useAutoExpandingTextarea';
-import { ChoiceTable, type NodeTable } from '@/tables/node';
 import {
-    type Persona,
-    PersonaSelectionTable,
-    PersonaTable,
-} from '@/tables/persona';
+    type PersonaWithSource,
+    useAvailablePersonas,
+} from '@/hooks/useAvailablePersonas';
+import { ChoiceTable, type NodeTable } from '@/tables/node';
+import { type Persona, PersonaSelectionTable } from '@/tables/persona';
 import { UserSettingsTable } from '@/tables/user';
 import { type FileAttachment, useSendMessage } from '../hooks/useSendMessage';
 
@@ -41,11 +39,6 @@ interface PendingFile {
     id?: string;
     uploading: boolean;
     error?: string;
-}
-
-interface PersonaWithSource {
-    persona: Persona;
-    source: PersonaSource;
 }
 
 export function MessageInput({
@@ -77,7 +70,8 @@ export function MessageInput({
     );
 
     // Get all personas (instance + space + user) and user's selection
-    const { data: instance } = useInstance();
+    const { allPersonasWithSource, enabledPersonaIds, enabledPersonas } =
+        useAvailablePersonas(doc);
     const { userDoc } = useUser();
 
     // Load user settings (with defaults)
@@ -96,71 +90,13 @@ export function MessageInput({
     const sendMessageOn = userSettings.sendMessageOn ?? 'ctrl+enter';
     const showReplySuggestions = userSettings.showReplySuggestions ?? true;
 
-    const instancePersonas = instance?.personas ?? [];
-    const spacePersonas = useQuery(
+    const sendReply = useSendMessage(
         doc,
-        PersonaTable,
-        () => any(),
-        [],
-        'content',
+        provider,
+        node,
+        enabledPersonas,
+        selectNode,
     );
-    // Note: React hooks must be called unconditionally, so we query spaceDoc as
-    // fallback when userDoc is null. The result is discarded in that case.
-    // This is slightly wasteful but only happens briefly during initial load.
-    const userPersonasQuery = useQuery(
-        userDoc ?? doc,
-        PersonaTable,
-        () => any(),
-        [],
-        'content',
-    );
-    const userPersonas = userDoc ? userPersonasQuery : [];
-
-    // Build ordered list with sources (same order as editor modal, sorted alphabetically within categories)
-    const allPersonasWithSource = useMemo(() => {
-        const spacePersonaKeys = new Set(spacePersonas.map((p) => p.key));
-        const sortByTitle = (a: Persona, b: Persona) =>
-            a.title.localeCompare(b.title);
-
-        // 1. Space personas (excluding those synced from user), sorted alphabetically
-        const spaceOnly = spacePersonas
-            .filter((p) => !userPersonas.find((up) => up.key === p.key))
-            .sort(sortByTitle)
-            .map((p): PersonaWithSource => ({ persona: p, source: 'space' }));
-
-        // 2. User personas synced to space, sorted alphabetically
-        const userSynced = userPersonas
-            .filter((p) => spacePersonaKeys.has(p.key))
-            .sort(sortByTitle)
-            .map((p): PersonaWithSource => ({ persona: p, source: 'user' }));
-
-        // 3. Instance personas (keep original order)
-        const instance = instancePersonas.map(
-            (p): PersonaWithSource => ({ persona: p, source: 'instance' }),
-        );
-
-        return [...spaceOnly, ...userSynced, ...instance];
-    }, [instancePersonas, spacePersonas, userPersonas]);
-
-    const allPersonas = useMemo(
-        () => allPersonasWithSource.map((p) => p.persona),
-        [allPersonasWithSource],
-    );
-    const defaultPersonas = allPersonas[0] ? [allPersonas[0].key] : [];
-
-    const personaSelection = useRow(
-        doc,
-        PersonaSelectionTable,
-        'default-user',
-        'content',
-    );
-    const enabledPersonas = personaSelection?.personaIds ?? defaultPersonas;
-
-    const personas = allPersonas.filter((value) =>
-        enabledPersonas.includes(value.key),
-    );
-
-    const sendReply = useSendMessage(doc, provider, node, personas, selectNode);
 
     const addFiles = (files: FileList | File[]) => {
         const newFiles: PendingFile[] = Array.from(files).map((file) => ({
@@ -256,8 +192,8 @@ export function MessageInput({
 
     const togglePersona = (id: string, enabled: boolean) => {
         const newPersonas = enabled
-            ? [...enabledPersonas, id]
-            : enabledPersonas.filter((p) => p !== id);
+            ? [...enabledPersonaIds, id]
+            : enabledPersonaIds.filter((p) => p !== id);
         upsert(doc, PersonaSelectionTable, {
             key: 'default-user',
             personaIds: newPersonas,
@@ -272,7 +208,7 @@ export function MessageInput({
 
             if (shouldSend) {
                 e.preventDefault();
-                if (personas.length > 0) {
+                if (enabledPersonas.length > 0) {
                     handleSend(inputText);
                 }
             }
@@ -282,7 +218,7 @@ export function MessageInput({
     const hasContent = inputText.trim() || pendingFiles.length > 0;
     const canSend =
         hasContent &&
-        personas.length > 0 &&
+        enabledPersonas.length > 0 &&
         !pendingFiles.some((f) => f.uploading) &&
         provider !== null;
 
@@ -309,8 +245,8 @@ export function MessageInput({
                     <span className="text-xs text-gray-400">→</span>
                     <PersonaSelector
                         allPersonasWithSource={allPersonasWithSource}
-                        enabledPersonas={enabledPersonas}
-                        personas={personas}
+                        enabledPersonas={enabledPersonaIds}
+                        personas={enabledPersonas}
                         togglePersona={togglePersona}
                     />
                 </div>
