@@ -399,16 +399,15 @@ async function generateChoices(
 
     context.push({
         role: 'user',
-        content: `Create three reply options for the above message. One sentence per option!`,
+        content: `Create up to three potential replies for the user about the above assistant message. Remember: short and succinct!`,
     });
 
     // Generate JSON that matches our schema
     const result = await generateText({
         model: model.model,
-        system: `Your task is to generate reply options for the user, who is chatting with an another AI assistant.
-
-Look at the last message sent by the assistant, and consider how the user might respond to it?
-You get to present 3 choices to the user. Write 3 most likely reply options - user can also write their own replies for rarer cases.`,
+        system: `When prompted, write up to three potential replies to be presented to the user of AI chat application.
+They should be short and on point; do not try to emulate the user's mannerisms.
+If you cannot think of good replies (e.g. when starting conversation), it is ok to write none.`,
         messages: context,
         output: Output.object({
             schema: GeneratedChoices,
