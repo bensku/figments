@@ -3,6 +3,7 @@ import { useQuery } from '@bensku/y-query-react';
 import { useCallback, useMemo } from 'react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useSpaceDoc } from '@/context/space';
+import { usePersona } from '@/hooks/usePersonas';
 import { NodeTable } from '@/tables/node';
 import { hashStringToHue } from '@/utils/colors';
 import { MessageInput } from './input';
@@ -228,36 +229,13 @@ export function StrandView({
                                     : 'mx-auto max-w-[76rem] grid grid-cols-2 md:grid-cols-3 gap-3 pl-[14rem] pr-[14rem] py-2'
                             }
                         >
-                            {branchNodes.map((node) => {
-                                const isUser = node.role === 'user';
-                                const llmHue = !isUser
-                                    ? hashStringToHue(node.author || 'default')
-                                    : 0;
-                                const textColor = isUser
-                                    ? '#2563eb'
-                                    : `hsl(${llmHue}, 70%, 35%)`;
-
-                                return (
-                                    <button
-                                        key={node.key}
-                                        type="button"
-                                        onClick={() => focusNode(node.key)}
-                                        className="p-3 text-left rounded-md bg-gray-50/50 hover:bg-gray-100 transition-colors"
-                                    >
-                                        <div
-                                            className="text-xs font-medium mb-1"
-                                            style={{ color: textColor }}
-                                        >
-                                            {isUser
-                                                ? 'You'
-                                                : node.author || 'assistant'}
-                                        </div>
-                                        <div className="text-sm text-gray-600 line-clamp-2">
-                                            {node.summary || 'No summary'}
-                                        </div>
-                                    </button>
-                                );
-                            })}
+                            {branchNodes.map((node) => (
+                                <NodeCard
+                                    key={node.key}
+                                    node={node}
+                                    onClick={() => focusNode(node.key)}
+                                />
+                            ))}
                         </div>
                     )}
                 </div>
@@ -302,4 +280,39 @@ function loadForward(
             return [nodes, children];
         }
     }
+}
+
+/**
+ * Card component for displaying a node summary in branch grids.
+ * Uses usePersona hook to resolve persona display names.
+ */
+function NodeCard({
+    node,
+    onClick,
+}: {
+    node: Row<typeof NodeTable>;
+    onClick: () => void;
+}) {
+    const persona = usePersona(node.author);
+    const isUser = node.role === 'user';
+    const llmHue = !isUser ? hashStringToHue(node.author || 'default') : 0;
+    const textColor = isUser ? '#2563eb' : `hsl(${llmHue}, 70%, 35%)`;
+
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className="p-3 text-left rounded-md bg-gray-50/50 hover:bg-gray-100 transition-colors"
+        >
+            <div
+                className="text-xs font-medium mb-1"
+                style={{ color: textColor }}
+            >
+                {isUser ? 'You' : persona?.title || 'Assistant'}
+            </div>
+            <div className="text-sm text-gray-600 line-clamp-2">
+                {node.summary || 'No summary'}
+            </div>
+        </button>
+    );
 }

@@ -1,15 +1,21 @@
+# Disable authentication and configure details of our "user"
 [auth]
 type = "none"
 userId = "admin"
 userName = "Test user"
 
+# LLM-generated messages are summarized for the tree view with this model
+# Use a cheap and fast model here!
 [summarizer]
 model = "default"
 
+# Enable reply option ("choice") generation
+# USe a cheap and fast model here, too!
 [choices]
 enabled = true
 model = "default"
 
+# Configure the models!
 [[models]]
 id = "default"
 provider = "anthropic"
@@ -84,6 +90,8 @@ displayName = "Gemini 3 Flash Preview (OR)"
 supportedMediaTypes = [ "image/png", "image/jpeg", "image/webp" ]
 features = [ "thinking", "thinkingEffort" ]
 
+# Instance's prebuilt personas/presets
+# Users can also create their own, these are just the default options!
 [[personas]]
 key = "default"
 title = "Default"
