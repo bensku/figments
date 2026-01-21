@@ -85,10 +85,6 @@ function SpaceRoute({
     const [, navigate] = useLocation();
     const { userDoc } = useUser();
 
-    const handleOpenSpace = (newSpaceId: string) => {
-        navigate(`/space/${newSpaceId}`);
-    };
-
     const handleFocusNode = (newNodeId: string | null) => {
         if (!spaceId) return;
         if (newNodeId) {
@@ -100,7 +96,7 @@ function SpaceRoute({
 
     return (
         <SpaceProvider spaceId={spaceId} userDoc={userDoc}>
-            <Sidebar openSpace={spaceId ?? ''} onOpenSpace={handleOpenSpace} />
+            <Sidebar openSpace={spaceId ?? ''} />
             <main className="flex-1 h-full overflow-hidden">
                 {spaceId ? (
                     <Space

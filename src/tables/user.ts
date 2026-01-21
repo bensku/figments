@@ -7,17 +7,21 @@ import z from 'zod';
 export const SpaceTable = table(
     'spaces',
     z.object({
-        key: z.string(),
-
         /**
-         * The id we'll use to lookup space's Y.Doc.
+         * Space id.
          */
-        spaceId: z.string(),
+        key: z.string(),
 
         /**
          * Title of space to show on UI.
          */
         title: z.string(),
+
+        /**
+         * Timestamp when the space was created.
+         * Used for consistent ordering in the sidebar.
+         */
+        createdAt: z.number(),
     }),
 );
 

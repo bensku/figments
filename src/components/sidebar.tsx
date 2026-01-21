@@ -1,7 +1,9 @@
-import { any, upsert } from '@bensku/y-query';
+import { any, type Row, update, upsert } from '@bensku/y-query';
 import { useQuery } from '@bensku/y-query-react';
 import { ChevronsLeftRight, LogOut, Settings } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { Link } from 'wouter';
+import { navigate } from 'wouter/use-browser-location';
 import type * as Y from 'yjs';
 import { SettingsModal } from '@/components/settings/modal';
 import {
@@ -14,13 +16,7 @@ import { useUser } from '@/context/user';
 import { useAutoFocus } from '@/hooks/useAutoFocus';
 import { SpaceTable } from '@/tables/user';
 
-export const Sidebar = ({
-    openSpace,
-    onOpenSpace,
-}: {
-    openSpace: string;
-    onOpenSpace: (spaceId: string) => void;
-}) => {
+export const Sidebar = ({ openSpace }: { openSpace: string }) => {
     const { displayName, userDoc } = useUser();
     const { sidebarCollapsed } = useUI();
     const [isHovered, setIsHovered] = useState(false);
@@ -67,7 +63,6 @@ export const Sidebar = ({
                             doc={userDoc}
                             displayName={displayName}
                             openSpace={openSpace}
-                            onOpenSpace={onOpenSpace}
                             isOverlay={isOverlay}
                             onOpenSettings={() => setSettingsOpen(true)}
                         />
@@ -90,19 +85,18 @@ function SidebarContent({
     doc,
     displayName,
     openSpace,
-    onOpenSpace,
     isOverlay,
     onOpenSettings,
 }: {
     doc: Y.Doc;
     displayName: string;
     openSpace: string;
-    onOpenSpace: (spaceId: string) => void;
     isOverlay: boolean;
     onOpenSettings: () => void;
 }) {
     const { sidebarCollapsed, setSidebarCollapsed } = useUI();
     const spaces = useQuery(doc, SpaceTable, () => any(), [], 'content');
+    const sortedSpaces = [...spaces].sort((a, b) => b.createdAt - a.createdAt);
     const [isCreating, setIsCreating] = useState(false);
 
     const handleToggle = () => {
@@ -128,15 +122,13 @@ function SidebarContent({
 
                 <SpaceList
                     doc={doc}
-                    spaces={spaces}
+                    spaces={sortedSpaces}
                     openSpace={openSpace}
-                    onOpenSpace={onOpenSpace}
                 />
 
                 {isCreating && (
                     <CreateSpaceForm
                         doc={doc}
-                        onOpenSpace={onOpenSpace}
                         onClose={() => setIsCreating(false)}
                     />
                 )}
@@ -194,12 +186,10 @@ function SpaceList({
     doc,
     spaces,
     openSpace,
-    onOpenSpace,
 }: {
     doc: Y.Doc;
-    spaces: { key: string; spaceId: string; title: string }[];
+    spaces: Row<typeof SpaceTable>[];
     openSpace: string;
-    onOpenSpace: (spaceId: string) => void;
 }) {
     const [renamingSpaceId, setRenamingSpaceId] = useState<string | null>(null);
     const [renamingTitle, setRenamingTitle] = useState('');
@@ -217,9 +207,8 @@ function SpaceList({
             setRenamingSpaceId(null);
             return;
         }
-        upsert(doc, SpaceTable, {
+        update(doc, SpaceTable, {
             key: renamingSpaceId,
-            spaceId: renamingSpaceId,
             title: renamingTitle.trim(),
         });
         setRenamingSpaceId(null);
@@ -242,7 +231,7 @@ function SpaceList({
         <>
             {spaces.map((space) => (
                 <div key={space.key} className="mb-1">
-                    {renamingSpaceId === space.spaceId ? (
+                    {renamingSpaceId === space.key ? (
                         <div className="px-2 py-1">
                             <input
                                 ref={renameInputRef}
@@ -263,31 +252,27 @@ function SpaceList({
                     ) : (
                         <Dropdown
                             trigger={
-                                <button
-                                    type="button"
-                                    onClick={() => onOpenSpace(space.spaceId)}
+                                <Link
+                                    href={`/space/${space.key}`}
                                     className={`
                                         w-full text-left px-3 py-2 rounded-lg text-sm
-                                        transition-colors
+                                        transition-colors block
                                         ${
-                                            space.spaceId === openSpace
+                                            space.key === openSpace
                                                 ? 'bg-blue-100 text-blue-800 font-medium'
                                                 : 'text-gray-700 hover:bg-gray-100'
                                         }
                                     `}
                                 >
                                     {space.title}
-                                </button>
+                                </Link>
                             }
                             triggerOnContextMenu
                             align="left"
                         >
                             <DropdownItem
                                 onClick={() =>
-                                    handleStartRenaming(
-                                        space.spaceId,
-                                        space.title,
-                                    )
+                                    handleStartRenaming(space.key, space.title)
                                 }
                             >
                                 Rename
@@ -302,11 +287,9 @@ function SpaceList({
 
 function CreateSpaceForm({
     doc,
-    onOpenSpace,
     onClose,
 }: {
     doc: Y.Doc;
-    onOpenSpace: (spaceId: string) => void;
     onClose: () => void;
 }) {
     const [newTitle, setNewTitle] = useState('');
@@ -320,13 +303,13 @@ function CreateSpaceForm({
         const spaceId = crypto.randomUUID();
         upsert(doc, SpaceTable, {
             key: spaceId,
-            spaceId,
             title: newTitle.trim(),
+            createdAt: Date.now(),
         });
 
         setNewTitle('');
         onClose();
-        onOpenSpace(spaceId);
+        navigate(`/space/${spaceId}`);
     };
 
     const handleCancel = () => {
