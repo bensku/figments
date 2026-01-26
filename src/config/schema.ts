@@ -20,6 +20,8 @@ export const ModelProvider = z.enum([
     'openai',
     'openaiCompatible',
     'openrouter',
+    'vertex',
+    'vertexAnthropic',
 ]);
 
 export const ModelConfig = z.object({

@@ -1,5 +1,7 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { devToolsMiddleware } from '@ai-sdk/devtools';
+import { createVertex } from '@ai-sdk/google-vertex';
+import { createVertexAnthropic } from '@ai-sdk/google-vertex/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { type LanguageModel, wrapLanguageModel } from 'ai';
@@ -64,6 +66,22 @@ function createLanguageModel(config: ModelConfig): LanguageModel {
                 apiKey: apiKey ?? process.env.OPENROUTER_API_KEY,
             });
             return openrouter(config.model);
+        }
+        case 'vertex': {
+            const vertex = createVertex({
+                baseURL: config.baseUrl,
+                apiKey,
+            });
+            return vertex(config.model);
+        }
+        case 'vertexAnthropic': {
+            const vertexAnthropic = createVertexAnthropic({
+                baseURL: config.baseUrl,
+                googleAuthOptions: {
+                    apiKey,
+                },
+            });
+            return vertexAnthropic(config.model);
         }
     }
 }

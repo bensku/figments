@@ -1,4 +1,6 @@
 import { type AnthropicProviderOptions, anthropic } from '@ai-sdk/anthropic';
+import type { GoogleGenerativeAIProviderOptions } from '@ai-sdk/google';
+import { vertexAnthropic } from '@ai-sdk/google-vertex/anthropic';
 import type { OpenAIResponsesProviderOptions } from '@ai-sdk/openai';
 import type { JSONObject } from '@ai-sdk/provider';
 import type { ModelMessage, Tool, ToolSet } from 'ai';
@@ -38,6 +40,12 @@ export function personaToTools(
             //     tools.web_search = openai.tools.webSearch();
             // }
             break;
+        case 'vertexAnthropic':
+            if (featureValue(persona, 'webSearch')) {
+                tools.web_search =
+                    vertexAnthropic.tools.webSearch_20250305() as Tool;
+            }
+            break;
         default:
             break;
     }
@@ -57,7 +65,8 @@ export function personaToProviderOptions(
     persona: Persona,
 ): Record<string, JSONObject> {
     switch (provider) {
-        case 'anthropic': {
+        case 'anthropic':
+        case 'vertexAnthropic': {
             const thinking = featureValue(persona, 'thinking') === true;
             const options: AnthropicProviderOptions = {
                 thinking: {
@@ -120,6 +129,25 @@ export function personaToProviderOptions(
                 openai: options,
             };
         }
+        case 'vertex': {
+            let effort = featureValue(persona, 'thinkingEffort');
+            if (effort === 'xhigh') {
+                effort = 'high';
+            }
+            const options: GoogleGenerativeAIProviderOptions = {
+                thinkingConfig: {
+                    includeThoughts: true,
+                    thinkingLevel: effort as 'low' | 'medium' | 'high',
+                    thinkingBudget: featureValue(
+                        persona,
+                        'thinkingBudget',
+                    ) as number,
+                },
+            };
+            return {
+                google: options,
+            };
+        }
         default:
             return {};
     }
@@ -137,7 +165,8 @@ export function personaToHeaders(
     persona: Persona,
 ) {
     switch (provider) {
-        case 'anthropic': {
+        case 'anthropic':
+        case 'vertexAnthropic': {
             const thinking = featureValue(persona, 'thinking') === true;
             return {
                 'anthropic-beta':
