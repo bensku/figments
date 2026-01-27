@@ -8,16 +8,26 @@ import { ClientMessage } from './messages';
 
 const s3Db = new Database({
     async fetch({ documentName }) {
-        const file = Bun.s3.file(`docs/${documentName}`);
-        if (!(await file.exists())) {
-            // Document does not yet exist. This is completely normal
-            return null;
+        try {
+            const file = Bun.s3.file(`docs/${documentName}`);
+            if (!(await file.exists())) {
+                // Document does not yet exist. This is completely normal
+                return null;
+            }
+            return new Uint8Array(await file.arrayBuffer());
+        } catch (e) {
+            console.error(e);
+            throw e;
         }
-        return new Uint8Array(await file.arrayBuffer());
     },
 
     async store({ documentName, state }) {
-        await Bun.s3.write(`docs/${documentName}`, state);
+        try {
+            await Bun.s3.write(`docs/${documentName}`, state);
+        } catch (e) {
+            console.error(e);
+            throw e;
+        }
     },
 });
 

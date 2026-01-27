@@ -25,8 +25,9 @@ export function createHocuspocusConnection({
     onSynced,
 }: HocuspocusConfig): HocuspocusConnection {
     const doc = new Y.Doc();
+    const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const provider = new HocuspocusProvider({
-        url: `ws://${location.hostname}:${location.port}/ws`,
+        url: `${wsProtocol}//${location.host}/ws`,
         name,
         document: doc,
         ...(onSynced && { onSynced: () => onSynced(doc) }),
