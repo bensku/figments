@@ -13,6 +13,12 @@ export const AuthConfig = z.discriminatedUnion('type', [
         userIdHeader: z.string(),
         userNameHeader: z.string(),
     }),
+    // Demo authentication - demoToken and demoUserId cookies
+    // Prevents literally everyone in Internet from accessing the environment
+    // but doesn't really offer much security otherwise
+    z.object({
+        type: z.literal('demo'),
+    }),
 ]);
 
 export const ModelProvider = z.enum([

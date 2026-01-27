@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { Router } from 'wouter';
 import { App } from './App';
+import { DemoGate } from './components/demo-gate';
 
 function start() {
     const container = document.getElementById('root');
@@ -10,7 +11,9 @@ function start() {
     const root = createRoot(container);
     root.render(
         <Router>
-            <App />
+            <DemoGate>
+                <App />
+            </DemoGate>
         </Router>,
     );
 }
