@@ -3,7 +3,9 @@ import { generateText, type ModelMessage, Output, streamText } from 'ai';
 import * as Y from 'yjs';
 import z from 'zod';
 import { CONFIG } from '@/config';
+import { openDocServer } from '@/sync/server';
 import { ChoiceTable, FragmentTable, NodeTable } from '@/tables/node';
+import { SpaceTable } from '@/tables/user';
 import {
     type Citation,
     extractDocumentCitation,
@@ -26,6 +28,7 @@ export async function generateFragments(
     doc: Y.Doc,
     node: Row<typeof NodeTable>,
     role: FragmentRole,
+    spaceId: string,
 ) {
     /**
      * Appends a fragment to currently generated node.
@@ -335,11 +338,25 @@ export async function generateFragments(
 
     // Generate pre-determined choices
     if (!errored) {
-        generateChoices(doc, node, [...fullContext]);
+        await generateChoices(doc, node, [...fullContext]);
     }
 
     // Summarize node in background for card views
-    generateSummary(doc, node, fullContext);
+    const summary = await generateSummary(doc, node, fullContext);
+    if (context.length === 1) {
+        // If this is possibly first LLM-generated message, use its summary as title
+        await openDocServer(`${userId}/config`, async (doc) => {
+            const row = getKey(doc, SpaceTable, spaceId);
+            // Try to avoid overwriting user-written title
+            // This might still happen due to race conditions, but that hopefully unlikely enough we don't need to care
+            if (row?.title === '') {
+                update(doc, SpaceTable, {
+                    key: spaceId,
+                    title: summary,
+                });
+            }
+        });
+    }
 }
 
 async function generateSummary(
@@ -372,6 +389,8 @@ async function generateSummary(
         key: node.key,
         summary: result.text,
     });
+
+    return result.text;
 }
 
 const GeneratedChoices = z.object({

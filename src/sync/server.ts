@@ -1,6 +1,7 @@
 import { eq, getKey, remove, select } from '@bensku/y-query';
 import { Database } from '@hocuspocus/extension-database';
 import { Hocuspocus } from '@hocuspocus/server';
+import type * as Y from 'yjs';
 import type { User } from '@/auth/user';
 import { generateFragments } from '@/llm/generate';
 import { FragmentTable, NodeTable } from '@/tables/node';
@@ -60,6 +61,7 @@ export const hocuspocus = new Hocuspocus({
         }
         return {
             user,
+            docId,
         };
     },
 
@@ -67,37 +69,53 @@ export const hocuspocus = new Hocuspocus({
         const message = ClientMessage.parse(JSON.parse(payload));
         switch (message.type) {
             case 'generate': {
-                const node = getKey(
-                    connection.document,
-                    NodeTable,
-                    message.node,
-                );
-                if (node) {
-                    if (message.force) {
-                        // If requested, DELETE all previous content
-                        const fragments = select(
-                            connection.document,
-                            FragmentTable,
-                            eq('node', node.key),
-                        );
-                        for (const fragment of fragments) {
-                            remove(
-                                connection.document,
+                // Open local connection to the doc
+                // We're creating fragments async, and don't want them to be only partially saved if
+                // the client happens to e.g. reconnect due to page refresh
+                const documentName = `${connection.context.user.id}/${connection.context.docId}`;
+                await openDocServer(documentName, async (doc) => {
+                    const node = getKey(doc, NodeTable, message.node);
+                    if (node) {
+                        if (message.force) {
+                            // If requested, DELETE all previous content
+                            const fragments = select(
+                                doc,
                                 FragmentTable,
-                                fragment.key,
+                                eq('node', node.key),
                             );
+                            for (const fragment of fragments) {
+                                remove(doc, FragmentTable, fragment.key);
+                            }
                         }
+                        // Generate content fragments
+                        await generateFragments(
+                            connection.context.user.id as string,
+                            doc,
+                            node,
+                            message.role,
+                            connection.context.docId,
+                        );
+                    } else {
+                        console.warn('Missing node', message.node, 'in doc', documentName, ', cannot generate it')
                     }
-                    // Generate content fragments
-                    generateFragments(
-                        connection.context.user.id as string,
-                        connection.document,
-                        node,
-                        message.role,
-                    );
-                }
+                });
                 break;
             }
         }
     },
 });
+
+/**
+ * Open a document on server, do things on it, then close it.
+ */
+export async function openDocServer(
+    documentName: string,
+    callback: (doc: Y.Doc) => Promise<void>,
+) {
+    const conn = await hocuspocus.openDirectConnection(documentName);
+    if (!conn.document) {
+        throw new Error();
+    }
+    await callback(conn.document)
+    await conn.disconnect();
+}

@@ -1,4 +1,4 @@
-import { any, type Row, update, upsert } from '@bensku/y-query';
+import { any, type Row, remove, update, upsert } from '@bensku/y-query';
 import { useQuery } from '@bensku/y-query-react';
 import { ChevronsLeftRight, LogOut, Settings } from 'lucide-react';
 import { useRef, useState } from 'react';
@@ -6,6 +6,7 @@ import { Link } from 'wouter';
 import { navigate } from 'wouter/use-browser-location';
 import type * as Y from 'yjs';
 import { SettingsModal } from '@/components/settings/modal';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
     Dropdown,
     DropdownItem,
@@ -97,7 +98,16 @@ function SidebarContent({
     const { sidebarCollapsed, setSidebarCollapsed } = useUI();
     const spaces = useQuery(doc, SpaceTable, () => any(), [], 'content');
     const sortedSpaces = [...spaces].sort((a, b) => b.createdAt - a.createdAt);
-    const [isCreating, setIsCreating] = useState(false);
+
+    const handleCreateSpace = () => {
+        const spaceId = crypto.randomUUID();
+        upsert(doc, SpaceTable, {
+            key: spaceId,
+            title: '',
+            createdAt: Date.now(),
+        });
+        navigate(`/space/${spaceId}`);
+    };
 
     const handleToggle = () => {
         if (isOverlay) {
@@ -125,19 +135,12 @@ function SidebarContent({
                     spaces={sortedSpaces}
                     openSpace={openSpace}
                 />
-
-                {isCreating && (
-                    <CreateSpaceForm
-                        doc={doc}
-                        onClose={() => setIsCreating(false)}
-                    />
-                )}
             </div>
 
             <div className="p-2 border-t border-gray-200">
                 <button
                     type="button"
-                    onClick={() => setIsCreating(true)}
+                    onClick={handleCreateSpace}
                     className="w-full px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg flex items-center gap-2"
                 >
                     <span className="text-lg leading-none">+</span>
@@ -193,6 +196,7 @@ function SpaceList({
 }) {
     const [renamingSpaceId, setRenamingSpaceId] = useState<string | null>(null);
     const [renamingTitle, setRenamingTitle] = useState('');
+    const [deletingSpaceId, setDeletingSpaceId] = useState<string | null>(null);
     const renameInputRef = useRef<HTMLInputElement>(null);
 
     useAutoFocus(!!renamingSpaceId, renameInputRef, true);
@@ -218,6 +222,27 @@ function SpaceList({
         setRenamingSpaceId(null);
         setRenamingTitle('');
     };
+
+    const handleConfirmDelete = () => {
+        if (!deletingSpaceId) return;
+
+        remove(doc, SpaceTable, deletingSpaceId);
+
+        // If we're deleting the currently open space, navigate to home
+        if (deletingSpaceId === openSpace) {
+            navigate('/');
+        }
+
+        setDeletingSpaceId(null);
+    };
+
+    const handleCancelDelete = () => {
+        setDeletingSpaceId(null);
+    };
+
+    const deletingSpace = deletingSpaceId
+        ? spaces.find((s) => s.key === deletingSpaceId)
+        : null;
 
     if (spaces.length === 0) {
         return (
@@ -264,7 +289,7 @@ function SpaceList({
                                         }
                                     `}
                                 >
-                                    {space.title}
+                                    {space.title || 'Untitled space'}
                                 </Link>
                             }
                             triggerOnContextMenu
@@ -277,77 +302,28 @@ function SpaceList({
                             >
                                 Rename
                             </DropdownItem>
+                            <DropdownItem
+                                onClick={() => setDeletingSpaceId(space.key)}
+                            >
+                                Delete
+                            </DropdownItem>
                         </Dropdown>
                     )}
                 </div>
             ))}
+
+            {deletingSpace && (
+                <ConfirmDialog
+                    isOpen={!!deletingSpaceId}
+                    onConfirm={handleConfirmDelete}
+                    onCancel={handleCancelDelete}
+                    title="Delete space?"
+                    message={`Are you sure you want to delete "${deletingSpace.title}"?`}
+                    confirmLabel="Delete"
+                    confirmVariant="danger"
+                />
+            )}
         </>
-    );
-}
-
-function CreateSpaceForm({
-    doc,
-    onClose,
-}: {
-    doc: Y.Doc;
-    onClose: () => void;
-}) {
-    const [newTitle, setNewTitle] = useState('');
-    const inputRef = useRef<HTMLInputElement>(null);
-
-    useAutoFocus(true, inputRef);
-
-    const handleCreateSpace = () => {
-        if (!newTitle.trim()) return;
-
-        const spaceId = crypto.randomUUID();
-        upsert(doc, SpaceTable, {
-            key: spaceId,
-            title: newTitle.trim(),
-            createdAt: Date.now(),
-        });
-
-        setNewTitle('');
-        onClose();
-        navigate(`/space/${spaceId}`);
-    };
-
-    const handleCancel = () => {
-        setNewTitle('');
-        onClose();
-    };
-
-    return (
-        <div className="px-2 py-2">
-            <input
-                ref={inputRef}
-                type="text"
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleCreateSpace();
-                    if (e.key === 'Escape') handleCancel();
-                }}
-                placeholder="Space name..."
-                className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-            />
-            <div className="flex gap-1 mt-1">
-                <button
-                    type="button"
-                    onClick={handleCreateSpace}
-                    className="flex-1 px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                    Create
-                </button>
-                <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="flex-1 px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-                >
-                    Cancel
-                </button>
-            </div>
-        </div>
     );
 }
 
