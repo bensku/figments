@@ -551,12 +551,16 @@ function FileFragment({ fragment }: FragmentProps<'file'>) {
 
 type FragmentComponent = (props: { fragment: Fragment }) => React.ReactNode;
 
-const fragmentRenderers: Record<FragmentData['type'], FragmentComponent> = {
+const fragmentRenderers: Record<
+    FragmentData['type'],
+    FragmentComponent | null
+> = {
     thinking: ThinkingFragment as FragmentComponent,
     text: TextFragment as FragmentComponent,
     toolCall: ToolCallFragment as FragmentComponent,
     toolResult: ToolResultFragment as FragmentComponent,
     file: FileFragment as FragmentComponent,
+    turn_end: null, // Invisible on client
     error: ErrorFragment as FragmentComponent,
     warning: WarningFragment as FragmentComponent,
 };

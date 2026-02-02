@@ -122,6 +122,9 @@ export const FragmentTable = table(
                 mediaType: z.string(),
                 filename: z.string(),
             }),
+            z.object({
+                type: z.literal('turn_end'),
+            }),
             // Abnormal fragment types
             z.object({
                 type: z.literal('error'),

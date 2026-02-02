@@ -96,7 +96,13 @@ export const hocuspocus = new Hocuspocus({
                             connection.context.docId,
                         );
                     } else {
-                        console.warn('Missing node', message.node, 'in doc', documentName, ', cannot generate it')
+                        console.warn(
+                            'Missing node',
+                            message.node,
+                            'in doc',
+                            documentName,
+                            ', cannot generate it',
+                        );
                     }
                 });
                 break;
@@ -116,6 +122,6 @@ export async function openDocServer(
     if (!conn.document) {
         throw new Error();
     }
-    await callback(conn.document)
+    await callback(conn.document);
     await conn.disconnect();
 }

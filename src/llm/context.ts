@@ -1,5 +1,5 @@
 import { and, eq, getKey, type Row, select } from '@bensku/y-query';
-import type { AssistantContent, ModelMessage, UserContent } from 'ai';
+import type { ModelMessage, UserContent } from 'ai';
 import type * as Y from 'yjs';
 import { FragmentTable, NodeTable } from '@/tables/node';
 import {
@@ -36,7 +36,7 @@ export async function loadContext(
     nodes.reverse();
 
     // Convert each node into a message
-    const futures: Promise<ModelMessage>[] = [];
+    const futures: Promise<ModelMessage[]>[] = [];
     for (const node of nodes) {
         // For now, only take the main fragments
         const fragments = select(
@@ -46,7 +46,7 @@ export async function loadContext(
         );
         fragments.sort((a, b) => a.createdAt - b.createdAt);
         futures.push(
-            toMessage(
+            toMessages(
                 userId,
                 node.role,
                 fragments,
@@ -55,7 +55,7 @@ export async function loadContext(
             ),
         );
     }
-    const messages = await Promise.all(futures);
+    const messages = (await Promise.all(futures)).flat();
 
     // Replace empty messages with placeholder content so that e.g. Anthropic API will work
     // Normally, empty messages should only occur due to bugs in Figments
@@ -68,13 +68,13 @@ export async function loadContext(
     return messages;
 }
 
-async function toMessage(
+async function toMessages(
     userId: string,
     creator: Row<typeof NodeTable>['role'],
     fragments: Row<typeof FragmentTable>[],
     model: Model,
     filterReasoning: boolean,
-): Promise<ModelMessage> {
+): Promise<ModelMessage[]> {
     const allParts = await Promise.all(
         fragments.map((f) => toPart(userId, f, model)),
     );
@@ -85,15 +85,38 @@ async function toMessage(
 
     switch (creator) {
         case 'user':
-            return {
-                role: 'user',
-                content: parts as UserContent,
-            };
-        case 'llm':
-            return {
-                role: 'assistant',
-                content: parts as AssistantContent,
-            };
+            return [
+                {
+                    role: 'user',
+                    content: parts as UserContent,
+                },
+            ];
+        case 'llm': {
+            const messages: ModelMessage[] = [
+                {
+                    role: 'assistant',
+                    content: [],
+                },
+            ];
+            let toolInProgress = false;
+            for (const part of parts) {
+                if (part.type === 'turn_end') {
+                    // Begin new message, initially tool call, then assistant response
+                    messages.push({
+                        role: toolInProgress ? 'tool' : 'assistant',
+                        content: [],
+                    });
+                    toolInProgress = !toolInProgress;
+                } else {
+                    // Append to currently processed message
+                    (messages[messages.length - 1]?.content as unknown[]).push(
+                        part,
+                    );
+                }
+            }
+
+            return messages;
+        }
     }
 }
 

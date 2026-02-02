@@ -239,6 +239,11 @@ export async function generateFragments(
                     }
                     break;
                 }
+                case 'start-step':
+                    newFragment({
+                        type: 'turn_end',
+                    });
+                    break;
                 case 'raw': {
                     // Web search citations are filtered by AI SDK, so we extract from raw
                     // Document citations come through 'source' events, skip them here
