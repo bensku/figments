@@ -194,6 +194,10 @@ async function toPart(
                 };
             }
         }
+        case 'turn_end':
+            return {
+                type: 'turn_end',
+            };
         case 'error':
         case 'warning':
             return {
@@ -201,6 +205,8 @@ async function toPart(
                 text: data.message,
             };
         default:
-            throw new Error();
+            throw new Error(
+                `unknown fragment type: ${(data as { type: string }).type}`,
+            );
     }
 }
