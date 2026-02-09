@@ -1,4 +1,6 @@
+import { checkAccess } from '@/auth/acl';
 import { requireUser } from '@/auth/hook';
+import { validateId } from '@/auth/user';
 import {
     isSafeMimeType,
     loadAttachment,
@@ -8,8 +10,17 @@ import { router } from './router';
 
 export const attachmentRoutes = router({
     // Serve uploaded attachments
-    '/api/attachment/:id': async (req) => {
-        const user = requireUser(req);
+    '/api/attachment/:spaceId/:id': async (req) => {
+        const session = requireUser(req);
+        const spaceId = validateId(req.params.spaceId, 'space id');
+        const attachmentId = validateId(req.params.id, 'attachment id');
+        checkAccess(session, [
+            {
+                type: 'read-upload',
+                resource: `${session.user.id}/${spaceId}/${attachmentId}`,
+            },
+        ]);
+
         const url = new URL(req.url);
 
         // y-query data describes what type this is
@@ -20,7 +31,12 @@ export const attachmentRoutes = router({
             // (plus this is very important if sharing is ever implemented!)
             return new Response('type not allowed', { status: 400 });
         }
-        const content = await loadAttachment(user.id, req.params.id, mimeType);
+        const content = await loadAttachment(
+            session.user.id,
+            spaceId,
+            attachmentId,
+            mimeType,
+        );
         if (content === null) {
             return new Response('not found', { status: 404 });
         }
@@ -31,8 +47,16 @@ export const attachmentRoutes = router({
     },
 
     // Allow attachment uploads!
-    '/api/attachment/upload': async (req) => {
-        const user = requireUser(req);
+    '/api/attachment/:spaceId/upload': async (req) => {
+        const session = requireUser(req);
+        const spaceId = validateId(req.params.spaceId, 'space id');
+        checkAccess(session, [
+            {
+                type: 'write-upload',
+                resource: `${session.user.id}/${spaceId}`,
+            },
+        ]);
+
         const formData = await req.formData();
         const file = formData.get('file');
         if (!file || typeof file === 'string') {
@@ -49,7 +73,12 @@ export const attachmentRoutes = router({
             );
         }
 
-        const id = await saveAttachment(user.id, mimeType, file);
+        const id = await saveAttachment(
+            session.user.id,
+            spaceId,
+            mimeType,
+            file,
+        );
         return Response.json({ id });
     },
 });

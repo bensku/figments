@@ -100,7 +100,7 @@ export async function generateFragments(
 
     // Figure what we'll be feeding to the LLM
     const system = persona.systemPrompt ?? undefined;
-    const context = await loadContext(userId, doc, node, model, {});
+    const context = await loadContext(userId, spaceId, doc, node, model, {});
 
     // Patch context with persona's options
     const prompt = context[context.length - 1];
@@ -336,7 +336,7 @@ export async function generateFragments(
     // Load context again, this time including the newly created message
     // TODO do not load context again; can be expensive if there are attachments!
     // FIXME if choice and summary models have different supported file types from main model, things break - badly
-    const fullContext = await loadContext(userId, doc, node, model, {
+    const fullContext = await loadContext(userId, spaceId, doc, node, model, {
         includeTarget: true,
         filterReasoning: true, // Unnecessary context bloat + probably unsupported to use reasoning across models
     });

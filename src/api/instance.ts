@@ -7,7 +7,7 @@ export const instanceRoutes = router({
     // Allow user to get list of admin-specified personas (for display purposes)
     '/api/instance/personas': async (req) => {
         requireUser(req);
-        // TODO allow instance admin to disable exposing system prompt etc?
+        // TODO allow instance admin to disable exposing system prompt, exact tool configurations, etc?
         return Response.json(CONFIG.personas);
     },
 

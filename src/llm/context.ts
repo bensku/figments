@@ -10,6 +10,7 @@ import type { Model } from './model';
 
 export async function loadContext(
     userId: string,
+    spaceId: string,
     doc: Y.Doc,
     targetNode: Row<typeof NodeTable>,
     model: Model,
@@ -48,6 +49,7 @@ export async function loadContext(
         futures.push(
             toMessages(
                 userId,
+                spaceId,
                 node.role,
                 fragments,
                 model,
@@ -70,13 +72,14 @@ export async function loadContext(
 
 async function toMessages(
     userId: string,
+    spaceId: string,
     creator: Row<typeof NodeTable>['role'],
     fragments: Row<typeof FragmentTable>[],
     model: Model,
     filterReasoning: boolean,
 ): Promise<ModelMessage[]> {
     const allParts = await Promise.all(
-        fragments.map((f) => toPart(userId, f, model)),
+        fragments.map((f) => toPart(userId, spaceId, f, model)),
     );
     // Filter out reasoning if requested
     const parts = !filterReasoning
@@ -122,6 +125,7 @@ async function toMessages(
 
 async function toPart(
     userId: string,
+    spaceId: string,
     fragment: Row<typeof FragmentTable>,
     model: Model,
 ) {
@@ -162,6 +166,7 @@ async function toPart(
             // TODO optionally use presigned URLs to avoid downloading data in memory
             const content = await loadAttachment(
                 userId,
+                spaceId,
                 data.attachmentId,
                 data.mediaType,
             );

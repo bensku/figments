@@ -1,25 +1,30 @@
 import { CONFIG } from '@/config';
-import type { User } from './user';
+import type { Action } from './acl';
+import { type Session, validateUserId } from './user';
 
-export function requireUser(req: Bun.BunRequest): User {
+export function requireUser(req: Bun.BunRequest): Session {
     const config = CONFIG.auth;
 
     switch (config.type) {
         case 'none': {
+            const id = validateUserId(config.userId);
             return {
-                id: config.userId,
-                displayName: config.userName,
+                user: {
+                    id,
+                    displayName: config.userName,
+                },
+                access: selfAccess(id),
             };
         }
         case 'proxy': {
-            const id = req.headers.get(config.userIdHeader);
-            if (!id) {
-                throw new Error(`missing header ${config.userIdHeader}`);
-            }
+            const id = validateUserId(req.headers.get(config.userIdHeader));
             return {
-                id,
-                // Default display name to user id if not found
-                displayName: req.headers.get(config.userNameHeader) ?? id,
+                user: {
+                    id,
+                    // Default display name to user id if not found
+                    displayName: req.headers.get(config.userNameHeader) ?? id,
+                },
+                access: selfAccess(id),
             };
         }
         case 'demo': {
@@ -30,16 +35,27 @@ export function requireUser(req: Bun.BunRequest): User {
             if (demoToken !== process.env.FIGMENTS_DEMO_TOKEN) {
                 throw new Error('invalid demo token');
             }
-            const id = req.cookies.get('demoUserId');
-            if (!id) {
-                throw new Error('missing demo user id');
-            }
+            const id = validateUserId(req.cookies.get('demoUserId'));
             return {
-                id,
-                displayName: 'Demo user',
+                user: {
+                    id,
+                    displayName: 'Demo user',
+                },
+                access: selfAccess(id),
             };
         }
         default:
             throw new Error('unknown auth type');
     }
+}
+
+function selfAccess(userId: string): Action[] {
+    return [
+        { type: 'read-user', resource: userId },
+        { type: 'write-user', resource: userId },
+        { type: 'read-space', resource: `${userId}/*` }, // user/space
+        { type: 'write-space', resource: `${userId}/*` },
+        { type: 'read-upload', resource: `${userId}/**` }, // user/space/upload
+        { type: 'write-upload', resource: `${userId}/**` },
+    ];
 }

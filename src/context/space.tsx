@@ -15,6 +15,7 @@ interface SpaceContextValue {
     spaceId: string | null;
     spaceDoc: Y.Doc | null;
     provider: HocuspocusProvider | null;
+    readOnly: boolean;
 }
 
 const SpaceContext = createContext<SpaceContextValue | null>(null);
@@ -31,11 +32,13 @@ export function SpaceProvider({ spaceId, children }: SpaceProviderProps) {
 
     const [spaceDoc, setSpaceDoc] = useState<Y.Doc | null>(null);
     const [provider, setProvider] = useState<HocuspocusProvider | null>(null);
+    const [readOnly, setReadOnly] = useState(false);
 
     useEffect(() => {
         // Clear doc and provider while loading new space
         setSpaceDoc(null);
         setProvider(null);
+        setReadOnly(false);
 
         if (!spaceId || !userDoc) {
             return;
@@ -48,6 +51,9 @@ export function SpaceProvider({ spaceId, children }: SpaceProviderProps) {
                 importUserPersonas(userDoc, doc);
                 setSpaceDoc(doc);
             },
+            onAuthenticated(scope) {
+                setReadOnly(scope === 'readonly');
+            },
         });
 
         setProvider(connection.provider);
@@ -56,7 +62,9 @@ export function SpaceProvider({ spaceId, children }: SpaceProviderProps) {
     }, [spaceId, userDoc, user.userId]);
 
     return (
-        <SpaceContext.Provider value={{ spaceId, spaceDoc, provider }}>
+        <SpaceContext.Provider
+            value={{ spaceId, spaceDoc, provider, readOnly }}
+        >
             {children}
         </SpaceContext.Provider>
     );

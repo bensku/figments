@@ -122,7 +122,7 @@ export const StrandNode = memo(function StrandNode({
     focusNode,
 }: StrandNodeProps) {
     const doc = useSpaceDoc();
-    const { provider } = useSpace();
+    const { provider, readOnly } = useSpace();
     const node = useRow(doc, NodeTable, id, 'content');
     const persona = usePersona(node?.author);
     const [isHovered, setIsHovered] = useState(false);
@@ -165,8 +165,9 @@ export const StrandNode = memo(function StrandNode({
 
     const isUser = node.role === 'user';
     const isLlm = node.role === 'llm';
-    const canRegenerate = isLlm && provider !== null;
-    const canGenerateReply = isUser && !hasChildren && provider !== null;
+    const canRegenerate = isLlm && provider !== null && !readOnly;
+    const canGenerateReply =
+        isUser && !hasChildren && provider !== null && !readOnly;
 
     // Generate hue from author name for LLM nodes (same as tree view)
     const llmHue = !isUser ? hashStringToHue(node.author || 'default') : 0;
@@ -384,17 +385,19 @@ export const StrandNode = memo(function StrandNode({
                         </button>
                     )}
                     {/* Delete button */}
-                    <button
-                        type="button"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setShowDeleteConfirm(true);
-                        }}
-                        className="p-1.5 bg-white/90 hover:bg-red-100 rounded-full text-gray-400 hover:text-red-600 transition-colors shadow-sm border border-gray-200"
-                        title="Delete message"
-                    >
-                        <Trash2 className="w-4 h-4" aria-hidden="true" />
-                    </button>
+                    {!readOnly && (
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setShowDeleteConfirm(true);
+                            }}
+                            className="p-1.5 bg-white/90 hover:bg-red-100 rounded-full text-gray-400 hover:text-red-600 transition-colors shadow-sm border border-gray-200"
+                            title="Delete message"
+                        >
+                            <Trash2 className="w-4 h-4" aria-hidden="true" />
+                        </button>
+                    )}
                     {/* Focus button */}
                     <button
                         type="button"

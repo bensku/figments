@@ -2,7 +2,8 @@ import { eq, getKey, remove, select } from '@bensku/y-query';
 import { Database } from '@hocuspocus/extension-database';
 import { Hocuspocus } from '@hocuspocus/server';
 import type * as Y from 'yjs';
-import type { User } from '@/auth/user';
+import { checkAccess } from '@/auth/acl';
+import { type Session, validateId } from '@/auth/user';
 import { generateFragments } from '@/llm/generate';
 import { FragmentTable, NodeTable } from '@/tables/node';
 import { ClientMessage } from './messages';
@@ -42,37 +43,65 @@ export const hocuspocus = new Hocuspocus({
             console.warn('Invalid document name', data.documentName);
             throw new Error();
         }
-        const userId = parts[0];
-        const docId = parts[1];
+        const userId = validateId(parts[0], 'user id');
+        const docId = validateId(parts[1], 'doc id');
 
         // biome-ignore lint/suspicious/noExplicitAny: we're smuggling the User from Bun's router here
-        const user = (data.request as any).user as User; // We could use a fake HTTP header, but that'd be even bigger footgun
+        const session = (data.request as any).session as Session; // We could use a fake HTTP header, but that'd be even bigger footgun
 
-        if (userId !== user.id) {
-            console.warn(
-                'User',
-                user.id,
-                'tried to access doc',
-                docId,
-                'from user',
-                userId,
-            );
-            throw new Error();
+        // Access control
+        if (docId === 'config') {
+            // User config
+            // TODO try to separate spaces of user better from other user data
+            checkAccess(session, [
+                { type: 'read-user', resource: userId },
+                { type: 'write-user', resource: userId },
+            ]);
+        } else {
+            // Access space nodes and other data
+            checkAccess(session, [
+                {
+                    type: 'read-space',
+                    resource: `${userId}/${docId}`,
+                },
+            ]);
+            try {
+                checkAccess(session, [
+                    {
+                        type: 'write-space',
+                        resource: `${userId}/${docId}`,
+                    },
+                ]);
+            } catch (_e) {
+                // No write access
+                data.connectionConfig.readOnly = true;
+            }
         }
+
         return {
-            user,
+            session,
+            userId,
             docId,
         };
     },
 
     async onStateless({ payload, connection }) {
         const message = ClientMessage.parse(JSON.parse(payload));
+        const session = connection.context.session as Session;
+        const userId = connection.context.userId as string;
+
         switch (message.type) {
             case 'generate': {
+                checkAccess(session, [
+                    {
+                        type: 'write-space',
+                        resource: `${userId}/${connection.context.docId}`,
+                    },
+                ]);
                 // Open local connection to the doc
                 // We're creating fragments async, and don't want them to be only partially saved if
                 // the client happens to e.g. reconnect due to page refresh
-                const documentName = `${connection.context.user.id}/${connection.context.docId}`;
+                const documentName = `${userId}/${connection.context.docId}`;
                 await openDocServer(documentName, async (doc) => {
                     const node = getKey(doc, NodeTable, message.node);
                     if (node) {
@@ -89,7 +118,7 @@ export const hocuspocus = new Hocuspocus({
                         }
                         // Generate content fragments
                         await generateFragments(
-                            connection.context.user.id as string,
+                            userId,
                             doc,
                             node,
                             message.role,

@@ -12,6 +12,7 @@ import {
 import Markdown, { type Components } from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
+import { useSpace } from '@/context/space';
 import type { Citation } from '@/llm/citation';
 import type { FragmentTable } from '@/tables/node';
 
@@ -511,8 +512,9 @@ function WarningFragment({ fragment }: FragmentProps<'warning'>) {
 }
 
 function FileFragment({ fragment }: FragmentProps<'file'>) {
+    const { spaceId } = useSpace();
     const isImage = fragment.data.mediaType.startsWith('image/');
-    const src = `/api/attachment/${fragment.data.attachmentId}?type=${encodeURIComponent(fragment.data.mediaType)}`;
+    const src = `/api/attachment/${spaceId}/${fragment.data.attachmentId}?type=${encodeURIComponent(fragment.data.mediaType)}`;
 
     if (isImage) {
         return (

@@ -24,13 +24,19 @@ import { type Persona, PersonaSelectionTable } from '@/tables/persona';
 import { UserSettingsTable } from '@/tables/user';
 import { type FileAttachment, useSendMessage } from '../hooks/useSendMessage';
 
-async function uploadFile(file: File): Promise<{ id: string }> {
+async function uploadFile(
+    spaceId: string,
+    file: File,
+): Promise<{ id: string }> {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await fetch('/api/attachment/upload', {
+    const response = await fetch(`/api/attachment/${spaceId}/upload`, {
         method: 'POST',
         body: formData,
     });
+    if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status}`);
+    }
     return response.json();
 }
 
@@ -49,7 +55,7 @@ export function MessageInput({
     selectNode: (id: string | null) => void;
 }) {
     const doc = useSpaceDoc();
-    const { provider } = useSpace();
+    const { spaceId, provider, readOnly } = useSpace();
     const [inputText, setInputText] = useState('');
     const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
     const [isDragging, setIsDragging] = useState(false);
@@ -99,6 +105,7 @@ export function MessageInput({
     );
 
     const addFiles = (files: FileList | File[]) => {
+        if (!spaceId) return;
         const newFiles: PendingFile[] = Array.from(files).map((file) => ({
             file,
             uploading: true,
@@ -107,7 +114,7 @@ export function MessageInput({
 
         // Upload each file
         for (const pendingFile of newFiles) {
-            uploadFile(pendingFile.file)
+            uploadFile(spaceId, pendingFile.file)
                 .then((result) => {
                     setPendingFiles((prev) =>
                         prev.map((f) =>
@@ -221,6 +228,10 @@ export function MessageInput({
         enabledPersonas.length > 0 &&
         !pendingFiles.some((f) => f.uploading) &&
         provider !== null;
+
+    if (readOnly) {
+        return null;
+    }
 
     return (
         <div className="flex gap-3">

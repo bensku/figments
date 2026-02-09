@@ -1,8 +1,9 @@
 import type { ServerWebSocket } from 'bun';
 import { attachmentRoutes } from './api/attachment';
 import { instanceRoutes } from './api/instance';
+import { checkAccess } from './auth/acl';
 import { requireUser } from './auth/hook';
-import type { User } from './auth/user';
+import type { Session } from './auth/user';
 import index from './index.html';
 import { hocuspocus } from './sync/server';
 import { WsAdapter } from './sync/ws-adapter';
@@ -18,7 +19,7 @@ interface WebSocketData {
  * Create a minimal IncomingMessage-like object from a Bun Request.
  * Hocuspocus only needs .headers and .url properties.
  */
-function toIncomingMessage(request: Request, user: User) {
+function toIncomingMessage(request: Request, session: Session) {
     const url = new URL(request.url);
     const headers: Record<string, string> = {};
     request.headers.forEach((value, key) => {
@@ -27,7 +28,7 @@ function toIncomingMessage(request: Request, user: User) {
     return {
         headers,
         url: url.pathname + url.search,
-        user,
+        session,
     };
 }
 
@@ -37,11 +38,12 @@ const server = Bun.serve({
 
         // Main sync API - most things use this
         '/ws': async (req, server) => {
-            const user = requireUser(req);
+            // ACLs are checked when spaces are opened, just check that user is logged in
+            const session = requireUser(req);
             if (
                 server.upgrade(req, {
                     data: {
-                        request: toIncomingMessage(req, user),
+                        request: toIncomingMessage(req, session),
                         adapter: new WsAdapter(),
                     },
                 })
@@ -53,7 +55,12 @@ const server = Bun.serve({
 
         // Allow user to query its own details so that they can be shown in frontend
         '/api/user': async (req) => {
-            return Response.json(requireUser(req));
+            const session = requireUser(req);
+            // Sharing a space leads to assume-user tokens that should NOT be allowed to read-user their creator
+            checkAccess(session, [
+                { type: 'read-user', resource: session.user.id },
+            ]);
+            return Response.json(session.user);
         },
 
         ...instanceRoutes,

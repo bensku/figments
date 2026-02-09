@@ -27,6 +27,7 @@ export function isSafeMimeType(type: string | null): type is string {
 
 /**
  * Saves user-provided attachment.
+ * @param spaceId Space where the attachment is used.
  * @param userId Owner of the attachment.
  * @param mimeType Media type of the data.
  * @param data The actual data from e.g. form upload.
@@ -34,6 +35,7 @@ export function isSafeMimeType(type: string | null): type is string {
  */
 export async function saveAttachment(
     userId: string,
+    spaceId: string,
     mimeType: string,
     data: File,
 ) {
@@ -41,13 +43,17 @@ export async function saveAttachment(
         throw new Error();
     }
     const attachmentId = crypto.randomUUID();
-    await Bun.s3.write(`uploads/${userId}/${attachmentId}.${mimeType}`, data);
+    await Bun.s3.write(
+        `uploads/${userId}/${spaceId}/${attachmentId}.${mimeType}`,
+        data,
+    );
     return attachmentId;
 }
 
 /**
  * Loads a previously saved attachment to memory.
  * @param userId Owner of the attachment.
+ * @param spaceId Space where the attachment is used.
  * @param attachmentId Attachment id returned by saveAttachment(...)
  * @param mimeType Media type of the data. This must match the media type
  * given to saveAttachment(...).
@@ -55,13 +61,16 @@ export async function saveAttachment(
  */
 export async function loadAttachment(
     userId: string,
+    spaceId: string,
     attachmentId: string,
     mimeType: string,
 ): Promise<ArrayBuffer | null> {
     if (!isSafeMimeType(mimeType)) {
         throw new Error();
     }
-    const file = Bun.s3.file(`uploads/${userId}/${attachmentId}.${mimeType}`);
+    const file = Bun.s3.file(
+        `uploads/${userId}/${spaceId}/${attachmentId}.${mimeType}`,
+    );
     if (!(await file.exists())) {
         return null;
     }

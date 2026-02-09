@@ -8,6 +8,8 @@ interface HocuspocusConfig {
     name: string;
     /** Called when the document is synced with the server */
     onSynced?: (doc: Y.Doc) => void;
+    /** Called when authentication succeeds, with the granted scope */
+    onAuthenticated?: (scope: 'read-write' | 'readonly') => void;
 }
 
 interface HocuspocusConnection {
@@ -23,6 +25,7 @@ interface HocuspocusConnection {
 export function createHocuspocusConnection({
     name,
     onSynced,
+    onAuthenticated,
 }: HocuspocusConfig): HocuspocusConnection {
     const doc = new Y.Doc();
     const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -31,6 +34,13 @@ export function createHocuspocusConnection({
         name,
         document: doc,
         ...(onSynced && { onSynced: () => onSynced(doc) }),
+        ...(onAuthenticated && {
+            onAuthenticated: ({
+                scope,
+            }: {
+                scope: 'read-write' | 'readonly';
+            }) => onAuthenticated(scope),
+        }),
         onAuthenticationFailed: () => location.reload(),
         onClose: ({ event }) => {
             // Hocuspocus uses 4401 (Unauthorized) and 4403 (Forbidden)
