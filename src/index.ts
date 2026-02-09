@@ -39,7 +39,7 @@ const server = Bun.serve({
         // Main sync API - most things use this
         '/ws': async (req, server) => {
             // ACLs are checked when spaces are opened, just check that user is logged in
-            const session = requireUser(req);
+            const session = await requireUser(req);
             if (
                 server.upgrade(req, {
                     data: {
@@ -55,7 +55,7 @@ const server = Bun.serve({
 
         // Allow user to query its own details so that they can be shown in frontend
         '/api/user': async (req) => {
-            const session = requireUser(req);
+            const session = await requireUser(req);
             // Sharing a space leads to assume-user tokens that should NOT be allowed to read-user their creator
             checkAccess(session, [
                 { type: 'read-user', resource: session.user.id },

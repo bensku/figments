@@ -1,8 +1,10 @@
-import { Network, Settings, Users } from 'lucide-react';
+import { Network, Settings, Share2, Users } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ShareDialog } from '@/components/header/share-dialog';
 import type { SettingsTab } from '@/components/settings/modal';
 import { SettingsModal } from '@/components/settings/modal';
-import { useSpaceDoc } from '@/context/space';
+import { useSpace, useSpaceDoc } from '@/context/space';
+import { useOptionalUser } from '@/context/user';
 import { useView } from '@/context/view';
 import { useShortcuts } from '@/hooks/useShortcuts';
 import { GraphView } from './graph/view';
@@ -24,6 +26,7 @@ export function ConversationView({
     const doc = useSpaceDoc();
     const tree = useConversationTree(doc);
     const { viewMode, setViewMode, toggleViewMode } = useView();
+    const user = useOptionalUser();
 
     // Find default node (first root node, or null if empty)
     const defaultNode = useMemo(() => {
@@ -76,8 +79,10 @@ export function ConversationView({
     useShortcuts(shortcuts);
 
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [shareOpen, setShareOpen] = useState(false);
     const [settingsDefaultTab, setSettingsDefaultTab] =
         useState<SettingsTab>('general');
+    const { readOnly } = useSpace();
 
     const openSettings = (tab: SettingsTab) => {
         setSettingsDefaultTab(tab);
@@ -100,29 +105,58 @@ export function ConversationView({
                 >
                     <Network width="18" height="18" aria-hidden="true" />
                 </button>
-                <button
-                    type="button"
-                    onClick={() => openSettings('personas')}
-                    className="p-2 rounded-lg bg-white/80 hover:bg-gray-100 transition-colors text-gray-600 hover:text-gray-900 shadow-sm border border-gray-200"
-                    title="Presets"
-                >
-                    <Users width="18" height="18" aria-hidden="true" />
-                </button>
-                <button
-                    type="button"
-                    onClick={() => openSettings('general')}
-                    className="p-2 rounded-lg bg-white/80 hover:bg-gray-100 transition-colors text-gray-600 hover:text-gray-900 shadow-sm border border-gray-200"
-                    title="Settings"
-                >
-                    <Settings width="18" height="18" aria-hidden="true" />
-                </button>
+                {user && (
+                    <>
+                        {!readOnly && (
+                            <button
+                                type="button"
+                                onClick={() => setShareOpen(true)}
+                                className="p-2 rounded-lg bg-white/80 hover:bg-gray-100 transition-colors text-gray-600 hover:text-gray-900 shadow-sm border border-gray-200"
+                                title="Share"
+                            >
+                                <Share2
+                                    width="18"
+                                    height="18"
+                                    aria-hidden="true"
+                                />
+                            </button>
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => openSettings('personas')}
+                            className="p-2 rounded-lg bg-white/80 hover:bg-gray-100 transition-colors text-gray-600 hover:text-gray-900 shadow-sm border border-gray-200"
+                            title="Presets"
+                        >
+                            <Users width="18" height="18" aria-hidden="true" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => openSettings('general')}
+                            className="p-2 rounded-lg bg-white/80 hover:bg-gray-100 transition-colors text-gray-600 hover:text-gray-900 shadow-sm border border-gray-200"
+                            title="Settings"
+                        >
+                            <Settings
+                                width="18"
+                                height="18"
+                                aria-hidden="true"
+                            />
+                        </button>
+                    </>
+                )}
             </div>
 
-            {settingsOpen && (
+            {user && settingsOpen && (
                 <SettingsModal
                     isOpen={settingsOpen}
                     onClose={() => setSettingsOpen(false)}
                     defaultTab={settingsDefaultTab}
+                />
+            )}
+
+            {user && shareOpen && (
+                <ShareDialog
+                    isOpen={shareOpen}
+                    onClose={() => setShareOpen(false)}
                 />
             )}
 

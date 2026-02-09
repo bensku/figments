@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Route, Switch, useLocation } from 'wouter';
 import type { User } from './auth/user';
+import { SharedSpace } from './components/shared-space';
 import { Sidebar } from './components/sidebar';
 import { Space } from './components/space';
 import { InstanceProvider } from './context/instance';
+import { ShareTokenProvider } from './context/share-token';
 import { SpaceProvider } from './context/space';
 import { UIProvider } from './context/ui';
 import { UserProvider, useUser } from './context/user';
@@ -11,6 +13,84 @@ import { ViewProvider } from './context/view';
 import './index.css';
 
 export const App = () => {
+    return (
+        <Switch>
+            {/* Shared space route - no user authentication required */}
+            <Route path="/shared/:userId/:spaceId">
+                {(params) => (
+                    <SharedSpaceRoute
+                        userId={params.userId}
+                        spaceId={params.spaceId}
+                    />
+                )}
+            </Route>
+
+            {/* Normal authenticated routes */}
+            <Route>
+                <AuthenticatedApp />
+            </Route>
+        </Switch>
+    );
+};
+
+/**
+ * Shared space route - renders a minimal view without user authentication.
+ * The share token is read from the URL query parameter.
+ */
+function SharedSpaceRoute({
+    userId,
+    spaceId,
+}: {
+    userId: string;
+    spaceId: string;
+}) {
+    const [, navigate] = useLocation();
+    const token = new URLSearchParams(window.location.search).get('token');
+
+    if (!token) {
+        return (
+            <div className="h-screen flex items-center justify-center text-gray-500">
+                Invalid share link: missing token
+            </div>
+        );
+    }
+
+    // Construct the full share token as expected by the backend: userId.spaceId.token
+    const shareToken = `${userId}.${spaceId}.${token}`;
+
+    const handleFocusNode = (newNodeId: string | null) => {
+        if (newNodeId) {
+            navigate(
+                `/shared/${userId}/${spaceId}?token=${encodeURIComponent(token)}`,
+                { replace: true },
+            );
+        }
+    };
+
+    return (
+        <ShareTokenProvider shareToken={shareToken}>
+            <ViewProvider>
+                <div className="h-screen flex flex-col overflow-hidden">
+                    <SpaceProvider
+                        spaceId={spaceId}
+                        ownerUserId={userId}
+                        userDoc={null}
+                    >
+                        <SharedSpace
+                            initialFocusedNode={null}
+                            onFocusChange={handleFocusNode}
+                        />
+                    </SpaceProvider>
+                </div>
+            </ViewProvider>
+        </ShareTokenProvider>
+    );
+}
+
+/**
+ * The main authenticated application - requires user login.
+ */
+function AuthenticatedApp() {
     const [user, setUser] = useState<User | null>(null);
 
     useEffect(() => {
@@ -73,7 +153,7 @@ export const App = () => {
             </UIProvider>
         </InstanceProvider>
     );
-};
+}
 
 function SpaceRoute({
     spaceId,

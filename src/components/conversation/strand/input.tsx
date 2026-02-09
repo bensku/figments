@@ -13,7 +13,7 @@ import {
     sourceLabels,
 } from '@/components/settings/persona/constants';
 import { useSpace, useSpaceDoc } from '@/context/space';
-import { useUser } from '@/context/user';
+import { useOptionalUser } from '@/context/user';
 import { useAutoExpandingTextarea } from '@/hooks/useAutoExpandingTextarea';
 import {
     type PersonaWithSource,
@@ -78,7 +78,8 @@ export function MessageInput({
     // Get all personas (instance + space + user) and user's selection
     const { allPersonasWithSource, enabledPersonaIds, enabledPersonas } =
         useAvailablePersonas(doc);
-    const { userDoc } = useUser();
+    const user = useOptionalUser();
+    const userDoc = user?.userDoc ?? null;
 
     // Load user settings (with defaults)
     // Note: React hooks must be called unconditionally, so we query spaceDoc as

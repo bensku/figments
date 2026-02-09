@@ -10,6 +10,8 @@ interface HocuspocusConfig {
     onSynced?: (doc: Y.Doc) => void;
     /** Called when authentication succeeds, with the granted scope */
     onAuthenticated?: (scope: 'read-write' | 'readonly') => void;
+    /** Share token for accessing shared spaces (passed as URL query param) */
+    shareToken?: string;
 }
 
 interface HocuspocusConnection {
@@ -26,11 +28,15 @@ export function createHocuspocusConnection({
     name,
     onSynced,
     onAuthenticated,
+    shareToken,
 }: HocuspocusConfig): HocuspocusConnection {
     const doc = new Y.Doc();
     const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = shareToken
+        ? `${wsProtocol}//${location.host}/ws?shareToken=${encodeURIComponent(shareToken)}`
+        : `${wsProtocol}//${location.host}/ws`;
     const provider = new HocuspocusProvider({
-        url: `${wsProtocol}//${location.host}/ws`,
+        url: wsUrl,
         name,
         document: doc,
         ...(onSynced && { onSynced: () => onSynced(doc) }),

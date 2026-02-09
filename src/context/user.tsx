@@ -53,6 +53,15 @@ export function useUser() {
     return context;
 }
 
+/**
+ * Like useUser, but returns null instead of throwing when outside UserProvider.
+ * Used by components that need to work both with and without authentication
+ * (e.g. SpaceProvider in shared space contexts).
+ */
+export function useOptionalUser() {
+    return useContext(UserContext);
+}
+
 export function useUserDoc() {
     const { userDoc } = useUser();
     if (!userDoc) {

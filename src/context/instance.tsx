@@ -68,3 +68,12 @@ export function useInstance() {
     }
     return context;
 }
+
+/**
+ * Like useInstance, but returns null instead of throwing when outside InstanceProvider.
+ * Used by hooks that need to work both with and without an instance
+ * (e.g. usePersonas in shared space contexts).
+ */
+export function useOptionalInstance() {
+    return useContext(InstanceContext);
+}

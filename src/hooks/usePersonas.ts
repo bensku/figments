@@ -1,7 +1,7 @@
 import { any } from '@bensku/y-query';
 import { useQuery } from '@bensku/y-query-react';
 import { useMemo } from 'react';
-import { useInstance } from '@/context/instance';
+import { useOptionalInstance } from '@/context/instance';
 import { useSpaceDoc } from '@/context/space';
 import { type Persona, PersonaTable } from '@/tables/persona';
 
@@ -11,8 +11,7 @@ import { type Persona, PersonaTable } from '@/tables/persona';
  */
 export function usePersonas(): Persona[] {
     const doc = useSpaceDoc();
-    const { data: instance } = useInstance();
-    const instancePersonas = instance?.personas ?? [];
+    const instancePersonas = useOptionalInstance()?.data?.personas ?? [];
     const spacePersonas = useQuery(
         doc,
         PersonaTable,

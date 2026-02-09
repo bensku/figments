@@ -11,7 +11,7 @@ import { router } from './router';
 export const attachmentRoutes = router({
     // Serve uploaded attachments
     '/api/attachment/:spaceId/:id': async (req) => {
-        const session = requireUser(req);
+        const session = await requireUser(req);
         const spaceId = validateId(req.params.spaceId, 'space id');
         const attachmentId = validateId(req.params.id, 'attachment id');
         checkAccess(session, [
@@ -48,7 +48,7 @@ export const attachmentRoutes = router({
 
     // Allow attachment uploads!
     '/api/attachment/:spaceId/upload': async (req) => {
-        const session = requireUser(req);
+        const session = await requireUser(req);
         const spaceId = validateId(req.params.spaceId, 'space id');
         checkAccess(session, [
             {

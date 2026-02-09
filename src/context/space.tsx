@@ -9,7 +9,8 @@ import {
 import type * as Y from 'yjs';
 import { createHocuspocusConnection } from '@/sync/hocuspocus';
 import { importUserPersonas } from '@/tables/persona';
-import { useUser } from './user';
+import { useShareToken } from './share-token';
+import { useOptionalUser } from './user';
 
 interface SpaceContextValue {
     spaceId: string | null;
@@ -22,13 +23,23 @@ const SpaceContext = createContext<SpaceContextValue | null>(null);
 
 interface SpaceProviderProps {
     spaceId: string | null;
+    /** Owner user ID - required for shared spaces where the viewer is not the owner */
+    ownerUserId?: string;
     userDoc: Y.Doc | null;
     children: ReactNode;
 }
 
-export function SpaceProvider({ spaceId, children }: SpaceProviderProps) {
-    const user = useUser();
-    const userDoc = user.userDoc;
+export function SpaceProvider({
+    spaceId,
+    ownerUserId,
+    children,
+}: SpaceProviderProps) {
+    const user = useOptionalUser();
+    const userDoc = user?.userDoc ?? null;
+    const shareToken = useShareToken();
+
+    // For shared spaces, use the owner's userId; otherwise use the current user's
+    const userId = ownerUserId ?? user?.userId;
 
     const [spaceDoc, setSpaceDoc] = useState<Y.Doc | null>(null);
     const [provider, setProvider] = useState<HocuspocusProvider | null>(null);
@@ -40,15 +51,23 @@ export function SpaceProvider({ spaceId, children }: SpaceProviderProps) {
         setProvider(null);
         setReadOnly(false);
 
-        if (!spaceId || !userDoc) {
+        if (!spaceId || !userId) {
+            return;
+        }
+
+        // For normal (non-shared) spaces, wait for userDoc to be ready
+        if (!shareToken && !userDoc) {
             return;
         }
 
         const connection = createHocuspocusConnection({
-            name: `${user.userId}/${spaceId}`,
+            name: `${userId}/${spaceId}`,
+            shareToken: shareToken ?? undefined,
             onSynced(doc) {
-                // Sync user personas to space
-                importUserPersonas(userDoc, doc);
+                // Sync user personas to space (only for authenticated users with their own doc)
+                if (userDoc) {
+                    importUserPersonas(userDoc, doc);
+                }
                 setSpaceDoc(doc);
             },
             onAuthenticated(scope) {
@@ -59,7 +78,7 @@ export function SpaceProvider({ spaceId, children }: SpaceProviderProps) {
         setProvider(connection.provider);
 
         return () => connection.destroy();
-    }, [spaceId, userDoc, user.userId]);
+    }, [spaceId, userDoc, userId, shareToken]);
 
     return (
         <SpaceContext.Provider

@@ -3,8 +3,8 @@ import { useQuery, useRow } from '@bensku/y-query-react';
 import { useMemo } from 'react';
 import type * as Y from 'yjs';
 import type { PersonaSource } from '@/components/settings/persona/persona-card';
-import { useInstance } from '@/context/instance';
-import { useUser } from '@/context/user';
+import { useOptionalInstance } from '@/context/instance';
+import { useOptionalUser } from '@/context/user';
 import {
     type Persona,
     PersonaSelectionTable,
@@ -21,10 +21,9 @@ export interface PersonaWithSource {
  * Also returns the currently enabled personas based on user selection.
  */
 export function useAvailablePersonas(spaceDoc: Y.Doc) {
-    const { data: instance } = useInstance();
-    const { userDoc } = useUser();
-
-    const instancePersonas = instance?.personas ?? [];
+    const instancePersonas = useOptionalInstance()?.data?.personas ?? [];
+    const userContext = useOptionalUser();
+    const userDoc = userContext?.userDoc ?? null;
     const spacePersonas = useQuery(
         spaceDoc,
         PersonaTable,
