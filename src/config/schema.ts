@@ -87,6 +87,18 @@ export const FeatureConfig = z.object({
     value: z.union([z.boolean(), z.number(), z.string()]),
 });
 
+export const ToolConfig = z.object({
+    /**
+     * Id of tool to enable.
+     */
+    tool: z.string(),
+
+    /**
+     * Tool options.
+     */
+    options: z.record(z.string(), z.unknown()),
+});
+
 export const PersonaConfig = z.object({
     key: z.string(),
 
@@ -121,6 +133,11 @@ export const PersonaConfig = z.object({
      * Configurations for model features that this persona enables.
      */
     features: z.array(FeatureConfig),
+
+    /**
+     * Local (Figments-provided) tools that are enabled for this model.
+     */
+    tools: z.array(ToolConfig).default([]),
 });
 
 export const Config = z.object({

@@ -1,5 +1,5 @@
 import { getKey, type Row, update, upsert } from '@bensku/y-query';
-import { generateText, type ModelMessage, Output, streamText } from 'ai';
+import { generateText, type ModelMessage, Output, stepCountIs, streamText } from 'ai';
 import * as Y from 'yjs';
 import z from 'zod';
 import { CONFIG } from '@/config';
@@ -20,6 +20,7 @@ import {
 } from './feature/adapter';
 import { MODEL_MAP } from './model';
 import { getPersona } from './persona';
+import { toolsForPersona } from './tool';
 
 type FragmentRole = Row<typeof FragmentTable>['role'];
 
@@ -30,6 +31,7 @@ export async function generateFragments(
     role: FragmentRole,
     spaceId: string,
 ) {
+    let now = Date.now();
     /**
      * Appends a fragment to currently generated node.
      * @param data Fragment data.
@@ -41,7 +43,7 @@ export async function generateFragments(
             key,
             node: node.key,
             role,
-            createdAt: Date.now(),
+            createdAt: now++, // FIXME very cursed
             data,
         });
         return getKey(doc, FragmentTable, key);
@@ -123,8 +125,11 @@ export async function generateFragments(
             model: model.model,
             system,
             messages: messagesWithPrefill,
-            // Convert features that are implemented as tools to AI SDK's tools
-            tools: personaToTools(model.config.provider, persona),
+            // Get persona's tools, including model features that are represented as AI SDK's tools
+            tools: {
+                ...personaToTools(model.config.provider, persona), // Model features to tools
+                ...toolsForPersona(persona), // Local (Figments-provided) tools
+            },
             // Do same for features implemented with provider-specific API options
             providerOptions: personaToProviderOptions(
                 model.config.provider,
@@ -134,6 +139,7 @@ export async function generateFragments(
             headers: personaToHeaders(model.config.provider, persona),
             // Enable raw chunks to access web search citations (AI SDK filters them out)
             includeRawChunks: true,
+            stopWhen: stepCountIs(10), // TODO configurable tool step count
         });
 
         // Stream parts and create/update fragments as needed
@@ -218,6 +224,14 @@ export async function generateFragments(
                     );
                     break;
                 case 'tool-result':
+                    if (!part.providerExecuted) {
+                        // Client-side tool results can't be stuffed to same message as their calls
+                        // For whatever reason, AI SDK does NOT emit finish-step
+                        // So let's just add turn_end ourself
+                        newFragment({
+                            type: 'turn_end',
+                        });
+                    }
                     fragments.push(
                         newFragment({
                             type: 'toolResult',
@@ -239,7 +253,10 @@ export async function generateFragments(
                     }
                     break;
                 }
-                case 'start-step':
+                case 'finish-step':
+                    // After LLM message has finished streaming, AI SDK produces this to mark a message boundary
+                    // We'll need to keep track of this to avoid FUN context issues in multi-turn conversation
+                    // Intentionally don't add in fragments array, it screws up back-filling
                     newFragment({
                         type: 'turn_end',
                     });
@@ -277,44 +294,41 @@ export async function generateFragments(
 
         // Backfill data that was not available during streaming to parts
         const output = (await result.response).messages;
-        if (output.length !== 1 || !output[0]) {
-            throw new Error(
-                'should not happen, agents are not yet supported and would break many other things!',
-            );
-        }
         let i = 0; // content might not be real array, so it lacks e.g. entries()
-        for (const part of output[0].content) {
-            // Add reasoning signatures, tool call metadata, etc.
-            const frag = fragments[i];
-            if (typeof part === 'object' && frag) {
-                if (part.type === 'reasoning') {
-                    update(doc, FragmentTable, {
-                        key: frag.key,
-                        data: {
-                            type: 'thinking', // Workaround for writeUnion() bug in y-query, remove if fixed
-                            providerOptions: part.providerOptions,
-                        },
-                    });
-                } else if (part.type === 'tool-call') {
-                    update(doc, FragmentTable, {
-                        key: frag.key,
-                        data: {
-                            type: 'toolCall',
-                            providerExecuted: part.providerExecuted,
-                            providerOptions: part.providerOptions,
-                        },
-                    });
-                } else if (part.type === 'tool-result') {
-                    update(doc, FragmentTable, {
-                        key: frag.key,
-                        data: {
-                            type: 'toolResult',
-                            providerOptions: part.providerOptions,
-                        },
-                    });
+        for (const msg of output) {
+            for (const part of msg.content) {
+                // Add reasoning signatures, tool call metadata, etc.
+                const frag = fragments[i];
+                if (typeof part === 'object' && frag) {
+                    if (part.type === 'reasoning') {
+                        update(doc, FragmentTable, {
+                            key: frag.key,
+                            data: {
+                                type: 'thinking', // Workaround for writeUnion() bug in y-query, remove if fixed
+                                providerOptions: part.providerOptions,
+                            },
+                        });
+                    } else if (part.type === 'tool-call') {
+                        update(doc, FragmentTable, {
+                            key: frag.key,
+                            data: {
+                                type: 'toolCall',
+                                providerExecuted: part.providerExecuted,
+                                providerOptions: part.providerOptions,
+                            },
+                        });
+                    } else if (part.type === 'tool-result') {
+                        update(doc, FragmentTable, {
+                            key: frag.key,
+                            data: {
+                                type: 'toolResult',
+                                providerOptions: part.providerOptions,
+                            },
+                        });
+                    }
                 }
+                i++;
             }
-            i++;
         }
     } catch (e) {
         errored = true;

@@ -12,7 +12,8 @@ import { featureValue } from '.';
 /**
  * Converts a persona's feature configurations into AI SDK tool configurations.
  * Note that not all features are tools; those that aren't need to be separately
- * handled in generateFragments().
+ * handled in generateFragments(). Similarly, Figments-provided (local) tools
+ * are not model features.
  * @param provider Provider that is used.
  * @param persona The persona configuration.
  * @returns Tools to pass for streamText().

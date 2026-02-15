@@ -106,7 +106,7 @@ async function toMessages(
                 if (part.type === 'turn_end') {
                     // Begin new message, initially tool call, then assistant response
                     messages.push({
-                        role: toolInProgress ? 'tool' : 'assistant',
+                        role: !toolInProgress ? 'tool' : 'assistant',
                         content: [],
                     });
                     toolInProgress = !toolInProgress;
@@ -116,6 +116,11 @@ async function toMessages(
                         part,
                     );
                 }
+            }
+            // turn_end always appends a new message
+            // However, after last turn we do NOT want a new empty message, so delete it
+            if (messages[messages.length - 1]?.content.length === 0) {
+                delete messages[messages.length - 1];
             }
 
             return messages;
