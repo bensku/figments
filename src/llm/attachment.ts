@@ -1,3 +1,6 @@
+import { validateId } from '@/auth/user';
+import { BLOBS } from '@/utils/blob';
+
 const TEXT_FILES = new Set([
     'text/plain',
     'text/markdown',
@@ -39,11 +42,13 @@ export async function saveAttachment(
     mimeType: string,
     data: File,
 ) {
+    validateId(userId, 'user id');
+    validateId(spaceId, 'space id');
     if (!isSafeMimeType(mimeType)) {
         throw new Error();
     }
     const attachmentId = crypto.randomUUID();
-    await Bun.s3.write(
+    await BLOBS.write(
         `uploads/${userId}/${spaceId}/${attachmentId}.${mimeType}`,
         data,
     );
@@ -65,16 +70,15 @@ export async function loadAttachment(
     attachmentId: string,
     mimeType: string,
 ): Promise<ArrayBuffer | null> {
+    validateId(userId, 'user id');
+    validateId(spaceId, 'space id');
+    validateId(attachmentId, 'attachment id');
     if (!isSafeMimeType(mimeType)) {
         throw new Error();
     }
-    const file = Bun.s3.file(
+    return BLOBS.read(
         `uploads/${userId}/${spaceId}/${attachmentId}.${mimeType}`,
     );
-    if (!(await file.exists())) {
-        return null;
-    }
-    return file.arrayBuffer();
 }
 
 export function tryConvertToText(

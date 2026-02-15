@@ -6,17 +6,18 @@ import { checkAccess } from '@/auth/acl';
 import { type Session, validateId } from '@/auth/user';
 import { generateFragments } from '@/llm/generate';
 import { FragmentTable, NodeTable } from '@/tables/node';
+import { BLOBS } from '@/utils/blob';
 import { ClientMessage } from './messages';
 
 const s3Db = new Database({
     async fetch({ documentName }) {
         try {
-            const file = Bun.s3.file(`docs/${documentName}`);
-            if (!(await file.exists())) {
+            const data = await BLOBS.read(`docs/${documentName}`);
+            if (data === null) {
                 // Document does not yet exist. This is completely normal
                 return null;
             }
-            return new Uint8Array(await file.arrayBuffer());
+            return new Uint8Array(data);
         } catch (e) {
             console.error(e);
             throw e;
@@ -25,7 +26,7 @@ const s3Db = new Database({
 
     async store({ documentName, state }) {
         try {
-            await Bun.s3.write(`docs/${documentName}`, state);
+            await BLOBS.write(`docs/${documentName}`, state);
         } catch (e) {
             console.error(e);
             throw e;
