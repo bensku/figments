@@ -30,7 +30,7 @@ interface ParallelSearchResponse {
 registerTool('parallel_web_search', SearchToolConfig, (config) => {
     return tool({
         description:
-            'Search the web for current information using Parallel\'s AI search. Returns excerpts of relevant web pages. Use this for finding up-to-date information, news, research, and facts.',
+            "Search the web for current information using Parallel's AI search. Returns excerpts of relevant web pages. Use this for finding up-to-date information, news, research, and facts.",
         inputSchema: z.object({
             objective: z
                 .string()
@@ -45,12 +45,14 @@ registerTool('parallel_web_search', SearchToolConfig, (config) => {
                 ),
         }),
         outputSchema: z.object({
-            results: z.array(z.object({
-                url: z.string(),
-                title: z.string(),
-                publish_date: z.string(),
-                excerpts: z.array(z.string())
-            })),
+            results: z.array(
+                z.object({
+                    url: z.string(),
+                    title: z.string(),
+                    publish_date: z.string(),
+                    excerpts: z.array(z.string()),
+                }),
+            ),
             warnings: z.any(),
         }),
         execute: async ({ objective, search_queries }) => {

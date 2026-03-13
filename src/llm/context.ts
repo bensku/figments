@@ -161,10 +161,7 @@ async function toPart(
                 type: 'tool-result',
                 toolCallId: data.callId,
                 toolName: data.toolName,
-                output: {
-                    type: 'json',
-                    value: data.output,
-                },
+                output: data.output,
                 providerOptions: data.providerOptions,
             };
         case 'file': {

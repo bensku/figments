@@ -12,7 +12,7 @@
         "check": "biome check --write && tsc --noEmit"
     },
     "dependencies": {
-        "@ai-sdk/anthropic": "^3.0.15",
+        "@ai-sdk/anthropic": "^3.0.58",
         "@ai-sdk/devtools": "^0.0.5",
         "@ai-sdk/google-vertex": "^4.0.28",
         "@ai-sdk/openai": "^3.0.12",
@@ -24,7 +24,7 @@
         "@hocuspocus/provider": "^3.4.3",
         "@hocuspocus/server": "^3.4.3",
         "@tailwindcss/typography": "^0.5.19",
-        "ai": "^6.0.39",
+        "ai": "^6.0.116",
         "bun-plugin-tailwind": "^0.1.2",
         "lucide-react": "^0.562.0",
         "react": "^19.2.3",

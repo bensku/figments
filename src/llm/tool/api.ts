@@ -1,6 +1,6 @@
-import type { Persona } from '@/tables/persona';
 import type { Tool } from 'ai';
 import type z from 'zod';
+import type { Persona } from '@/tables/persona';
 
 interface ToolEntry {
     id: string;
@@ -32,7 +32,13 @@ export function toolsForPersona(persona: Persona): Record<string, Tool> {
     for (const config of persona.tools) {
         const entry = TOOL_MAP.get(config.tool);
         if (!entry) {
-            console.warn('Tool', config.tool, 'used by persona', persona.key, 'does not exist');
+            console.warn(
+                'Tool',
+                config.tool,
+                'used by persona',
+                persona.key,
+                'does not exist',
+            );
             continue;
         }
         // TODO validate tool config against schema somewhere (at boot?), but not here!

@@ -1,5 +1,11 @@
 import { getKey, type Row, update, upsert } from '@bensku/y-query';
-import { generateText, type ModelMessage, Output, stepCountIs, streamText } from 'ai';
+import {
+    generateText,
+    type ModelMessage,
+    Output,
+    stepCountIs,
+    streamText,
+} from 'ai';
 import * as Y from 'yjs';
 import z from 'zod';
 import { CONFIG } from '@/config';
@@ -43,9 +49,14 @@ export async function generateFragments(
             key,
             node: node.key,
             role,
-            createdAt: now++, // FIXME very cursed
+            createdAt: now,
             data,
         });
+        now += 100; // FIXME very cursed
+        // We'll need to add fragments between the current ones after the fact
+        // because AI SDK's streaming support has tendency to filter "unimportant" details
+        // such as entire server-side tool calls out...
+        // And it turns out, LLM APIs are VERY picky about where those should be put to :/
         return getKey(doc, FragmentTable, key);
     };
 
@@ -220,6 +231,7 @@ export async function generateFragments(
                             callId: part.toolCallId,
                             toolName: part.toolName,
                             input: part.input,
+                            providerExecuted: part.providerExecuted,
                         }),
                     );
                     break;
@@ -228,9 +240,17 @@ export async function generateFragments(
                         // Client-side tool results can't be stuffed to same message as their calls
                         // For whatever reason, AI SDK does NOT emit finish-step
                         // So let's just add turn_end ourself
-                        newFragment({
-                            type: 'turn_end',
-                        });
+                        if (
+                            fragments[fragments.length - 1]?.data.type !==
+                            'toolResult'
+                        ) {
+                            // However, allow putting multiple tool results into one result message
+                            fragments.push(
+                                newFragment({
+                                    type: 'turn_end',
+                                }),
+                            );
+                        }
                     }
                     fragments.push(
                         newFragment({
@@ -256,10 +276,11 @@ export async function generateFragments(
                 case 'finish-step':
                     // After LLM message has finished streaming, AI SDK produces this to mark a message boundary
                     // We'll need to keep track of this to avoid FUN context issues in multi-turn conversation
-                    // Intentionally don't add in fragments array, it screws up back-filling
-                    newFragment({
-                        type: 'turn_end',
-                    });
+                    fragments.push(
+                        newFragment({
+                            type: 'turn_end',
+                        }),
+                    );
                     break;
                 case 'raw': {
                     // Web search citations are filtered by AI SDK, so we extract from raw
@@ -288,27 +309,78 @@ export async function generateFragments(
                 case 'abort':
                     // TODO do we need to handle this somehow?
                     break;
-                // TODO fix client-side tool calls - i.e. multiple steps
             }
         }
 
         // Backfill data that was not available during streaming to parts
+        // This is mostly to work around AI SDK's various bugs...
         const output = (await result.response).messages;
-        let i = 0; // content might not be real array, so it lacks e.g. entries()
+
+        // Index existing fragments by their natural keys
+        type Fragment = NonNullable<(typeof fragments)[0]>;
+        const toolCalls = new Map<string, Fragment>();
+        const toolResults = new Map<string, Fragment>();
+        const textQueue: Fragment[] = [];
+        const reasoningQueue: Fragment[] = [];
+
+        for (const frag of fragments) {
+            if (!frag) continue;
+            switch (frag.data.type) {
+                case 'toolCall':
+                    toolCalls.set(frag.data.callId, frag);
+                    break;
+                case 'toolResult':
+                    toolResults.set(frag.data.callId, frag);
+                    break;
+                case 'text':
+                    textQueue.push(frag);
+                    break;
+                case 'thinking':
+                    reasoningQueue.push(frag);
+                    break;
+            }
+        }
+
+        /**
+         * Insert a fragment immediately after another fragment.
+         */
+        const insertAfter = (
+            data: Row<typeof FragmentTable>['data'],
+            after: Row<typeof FragmentTable>,
+        ) => {
+            const key = crypto.randomUUID();
+            upsert(doc, FragmentTable, {
+                key,
+                node: node.key,
+                role,
+                createdAt: after.createdAt + 1,
+                data,
+            });
+        };
+
+        // Walk response messages: match existing fragments and backfill data to them
+        // If we're missing tool responses, assume they're server-side tools and
+        // create new fragments for those
         for (const msg of output) {
             for (const part of msg.content) {
-                // Add reasoning signatures, tool call metadata, etc.
-                const frag = fragments[i];
-                if (typeof part === 'object' && frag) {
-                    if (part.type === 'reasoning') {
+                if (typeof part !== 'object') continue;
+
+                if (part.type === 'reasoning') {
+                    const frag = reasoningQueue.shift();
+                    if (frag) {
                         update(doc, FragmentTable, {
                             key: frag.key,
                             data: {
-                                type: 'thinking', // Workaround for writeUnion() bug in y-query, remove if fixed
+                                type: 'thinking',
                                 providerOptions: part.providerOptions,
                             },
                         });
-                    } else if (part.type === 'tool-call') {
+                    } else {
+                        throw new Error(); // Should never happen
+                    }
+                } else if (part.type === 'tool-call') {
+                    const frag = toolCalls.get(part.toolCallId);
+                    if (frag) {
                         update(doc, FragmentTable, {
                             key: frag.key,
                             data: {
@@ -317,17 +389,40 @@ export async function generateFragments(
                                 providerOptions: part.providerOptions,
                             },
                         });
-                    } else if (part.type === 'tool-result') {
+                    } else {
+                        throw new Error(); // Should never happen
+                    }
+                } else if (part.type === 'tool-result') {
+                    const resultFrag = toolResults.get(part.toolCallId);
+                    if (resultFrag) {
                         update(doc, FragmentTable, {
-                            key: frag.key,
+                            key: resultFrag.key,
                             data: {
                                 type: 'toolResult',
                                 providerOptions: part.providerOptions,
+                                toolName: part.toolName,
+                                output: part.output,
                             },
                         });
+                    } else {
+                        // Result is missing entirely, uh oh
+                        const callFrag = toolCalls.get(part.toolCallId);
+                        if (callFrag) {
+                            insertAfter(
+                                {
+                                    type: 'toolResult',
+                                    callId: part.toolCallId,
+                                    toolName: part.toolName,
+                                    output: part.output,
+                                    providerOptions: part.providerOptions,
+                                },
+                                callFrag,
+                            );
+                        } else {
+                            throw new Error(); // Should never happen!
+                        }
                     }
                 }
-                i++;
             }
         }
     } catch (e) {
