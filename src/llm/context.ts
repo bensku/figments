@@ -17,6 +17,7 @@ export async function loadContext(
     options: {
         includeTarget?: boolean;
         filterReasoning?: boolean;
+        filterToolUse?: boolean;
     },
 ): Promise<ModelMessage[]> {
     // Get a chain of nodes from root to target
@@ -54,6 +55,7 @@ export async function loadContext(
                 fragments,
                 model,
                 !!options.filterReasoning,
+                !!options.filterToolUse,
             ),
         );
     }
@@ -77,14 +79,23 @@ async function toMessages(
     fragments: Row<typeof FragmentTable>[],
     model: Model,
     filterReasoning: boolean,
+    filterToolUse: boolean,
 ): Promise<ModelMessage[]> {
     const allParts = await Promise.all(
         fragments.map((f) => toPart(userId, spaceId, f, model)),
     );
-    // Filter out reasoning if requested
-    const parts = !filterReasoning
-        ? allParts
-        : allParts.filter((part) => part.type !== 'reasoning');
+    // Filter out reasoning and/or tool use if requested
+    const parts = allParts.filter((part) => {
+        if (filterReasoning && part.type === 'reasoning') return false;
+        if (
+            filterToolUse &&
+            (part.type === 'tool-call' ||
+                part.type === 'tool-result' ||
+                part.type === 'turn_end')
+        )
+            return false;
+        return true;
+    });
 
     switch (creator) {
         case 'user':

@@ -11,7 +11,7 @@ const SearchToolConfig = z.object({
         .max(20)
         .default(10)
         .describe('Maximum search result count'),
-    mode: z.enum(['one-shot', 'agentic', 'fast']).default('one-shot'),
+    mode: z.enum(['one-shot', 'agentic', 'fast']).default('agentic'),
 });
 
 interface ParallelSearchResult {
@@ -76,7 +76,7 @@ registerTool('parallel_web_search', SearchToolConfig, (config) => {
                     search_queries,
                     max_results: config.maxResults,
                     excerpts: {
-                        max_chars_per_result: 10000,
+                        max_chars_per_result: 5000,
                     },
                 }),
             });
@@ -96,7 +96,7 @@ registerTool('parallel_web_search', SearchToolConfig, (config) => {
                     url: result.url,
                     title: result.title,
                     publish_date: result.publish_date,
-                    excerpts: result.excerpts ?? [],
+                    excerpts: result.excerpts ?? [], // TODO limit excerpts?
                 })),
                 warnings: data.warnings,
             };

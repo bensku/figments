@@ -5,10 +5,12 @@ import {
     Output,
     stepCountIs,
     streamText,
+    wrapLanguageModel,
 } from 'ai';
 import * as Y from 'yjs';
 import z from 'zod';
 import { CONFIG } from '@/config';
+import { anthropicCacheMiddleware } from '@/llm/cache';
 import { openDocServer } from '@/sync/server';
 import { ChoiceTable, FragmentTable, NodeTable } from '@/tables/node';
 import { SpaceTable } from '@/tables/user';
@@ -131,9 +133,22 @@ export async function generateFragments(
 
     let errored = false;
     try {
+        // Wrap with cache middleware for Anthropic providers to reduce
+        // input token costs during multi-step tool use
+        const useCache =
+            model.config.provider === 'anthropic' ||
+            model.config.provider === 'vertexAnthropic';
+        const wrappedModel = useCache
+            ? wrapLanguageModel({
+                  // biome-ignore lint/suspicious/noExplicitAny: wrapLanguageModel expects LanguageModelV3
+                  model: model.model as any,
+                  middleware: anthropicCacheMiddleware,
+              })
+            : model.model;
+
         // And now we can actually generate
         const result = streamText({
-            model: model.model,
+            model: wrappedModel,
             system,
             messages: messagesWithPrefill,
             // Get persona's tools, including model features that are represented as AI SDK's tools
@@ -448,6 +463,7 @@ export async function generateFragments(
     const fullContext = await loadContext(userId, spaceId, doc, node, model, {
         includeTarget: true,
         filterReasoning: true, // Unnecessary context bloat + probably unsupported to use reasoning across models
+        filterToolUse: true, // Summary/choices only need the final text, not intermediate tool calls
     });
 
     // Generate pre-determined choices
