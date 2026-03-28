@@ -15,6 +15,11 @@ import remarkGfm from 'remark-gfm';
 import { useSpace } from '@/context/space';
 import type { Citation } from '@/llm/citation';
 import type { FragmentTable } from '@/tables/node';
+import {
+    GenericToolCallRenderer,
+    GenericToolResultRenderer,
+    toolCallRenderers,
+} from './tools';
 
 type Fragment = Row<typeof FragmentTable>;
 type FragmentData = Fragment['data'];
@@ -303,89 +308,6 @@ function TextFragment({ fragment }: FragmentProps<'text'>) {
     return <TextFragmentGroup fragments={[fragment]} />;
 }
 
-// Special tool call renderers
-type ToolCallRenderer = (props: {
-    input: unknown;
-    result?: unknown;
-}) => React.ReactNode;
-
-function WebSearchCallRenderer({
-    input,
-    result,
-}: {
-    input: unknown;
-    result?: unknown;
-}) {
-    const [expanded, setExpanded] = useState(false);
-    const query =
-        input && typeof input === 'object' && 'query' in input
-            ? String((input as { query: unknown }).query)
-            : null;
-
-    const results = Array.isArray(result)
-        ? (result as WebSearchResult[])
-        : null;
-
-    return (
-        <div className="text-sm">
-            <button
-                type="button"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    if (results && results.length > 0) {
-                        setExpanded(!expanded);
-                    }
-                }}
-                className={`inline-flex items-center gap-1 text-amber-700 ${results && results.length > 0 ? 'hover:text-amber-800 transition-colors hover:[text-shadow:_0_0_8px_rgb(217_119_6_/_0.4)]' : ''}`}
-            >
-                {results && results.length > 0 && (
-                    <ChevronRight
-                        className={`w-3 h-3 transition-transform duration-150 ${expanded ? 'rotate-90' : ''}`}
-                        fill="currentColor"
-                        aria-hidden="true"
-                    />
-                )}
-                <span>Web search</span>
-                {query && <span className="ml-1">&ldquo;{query}&rdquo;</span>}
-                {results && results.length > 0 && (
-                    <span className="ml-1 text-gray-500">
-                        · {results.length} result{results.length !== 1 && 's'}
-                    </span>
-                )}
-            </button>
-            {expanded && results && results.length > 0 && (
-                <div className="mt-2 pl-4 border-l-2 border-gray-200 space-y-1">
-                    {results.map((r) => (
-                        <div
-                            key={r.url}
-                            className="text-xs flex items-baseline gap-2"
-                        >
-                            <a
-                                href={r.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-gray-700 hover:text-gray-900 hover:underline truncate flex-1 min-w-0"
-                                title={r.title}
-                            >
-                                {r.title}
-                            </a>
-                            {r.pageAge && (
-                                <span className="text-gray-400 whitespace-nowrap flex-shrink-0">
-                                    {r.pageAge}
-                                </span>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-}
-
-const toolCallRenderers: Record<string, ToolCallRenderer> = {
-    web_search: WebSearchCallRenderer,
-};
-
 interface ToolCallFragmentProps extends FragmentProps<'toolCall'> {
     result?: unknown;
 }
@@ -399,98 +321,19 @@ export function ToolCallFragment({ fragment, result }: ToolCallFragmentProps) {
     }
 
     return (
-        <div className="border border-amber-200 bg-amber-50 rounded px-3 py-2 text-sm">
-            <span className="text-amber-700">
-                <span className="font-medium">Tool Call </span>
-                <span className="text-amber-600 font-mono">{toolName}</span>
-            </span>
-        </div>
+        <GenericToolCallRenderer
+            toolName={toolName}
+            input={input}
+            result={result}
+        />
     );
 }
-
-// Special tool result renderers
-type ToolResultRenderer = (props: { output: unknown }) => React.ReactNode;
-
-interface WebSearchResult {
-    url: string;
-    title: string;
-    pageAge?: string;
-}
-
-function WebSearchResultRenderer({ output }: { output: unknown }) {
-    const [expanded, setExpanded] = useState(false);
-
-    if (!Array.isArray(output)) return null;
-
-    const results = output as WebSearchResult[];
-    if (results.length === 0) return null;
-
-    return (
-        <div className="text-sm">
-            <button
-                type="button"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    setExpanded(!expanded);
-                }}
-                className="inline-flex items-center gap-1 text-amber-700 hover:text-amber-800 transition-colors hover:[text-shadow:_0_0_8px_rgb(217_119_6_/_0.4)]"
-            >
-                <ChevronRight
-                    className={`w-3 h-3 transition-transform duration-150 ${expanded ? 'rotate-90' : ''}`}
-                    fill="currentColor"
-                    aria-hidden="true"
-                />
-                <span>
-                    {results.length} result{results.length !== 1 && 's'}
-                </span>
-            </button>
-            {expanded && (
-                <div className="mt-2 pl-4 border-l-2 border-gray-200 space-y-1">
-                    {results.map((result) => (
-                        <div key={result.url} className="text-xs">
-                            <a
-                                href={result.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-gray-700 hover:text-gray-900 hover:underline"
-                            >
-                                {result.title}
-                            </a>
-                            {result.pageAge && (
-                                <span className="text-gray-400 ml-2">
-                                    {result.pageAge}
-                                </span>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-}
-
-const toolResultRenderers: Record<string, ToolResultRenderer> = {
-    web_search: WebSearchResultRenderer,
-};
 
 function ToolResultFragment({ fragment }: FragmentProps<'toolResult'>) {
+    // Normally, tool results are rendered within calls
+    // Something very weird must happen for us to even hit this component
     const { toolName, output } = fragment.data;
-
-    // Some tool call types have their own renderers
-    // This enables e.g. displaying of source URLs for web searches
-    const SpecialRenderer = toolResultRenderers[toolName];
-    if (SpecialRenderer) {
-        return <SpecialRenderer output={output} />;
-    }
-
-    return (
-        <div className="border border-green-200 bg-green-50 rounded px-3 py-2 text-sm">
-            <span className="text-green-700">
-                <span className="font-medium">Tool Result </span>
-                <span className="text-green-600 font-mono">{toolName}</span>
-            </span>
-        </div>
-    );
+    return <GenericToolResultRenderer toolName={toolName} output={output} />;
 }
 
 function ErrorFragment({ fragment }: FragmentProps<'error'>) {
