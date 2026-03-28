@@ -1,6 +1,7 @@
 import { requireUser } from '@/auth/hook';
 import { CONFIG } from '@/config';
 import { modelFeatures } from '@/llm/feature';
+import { toolMetadata } from '@/llm/tool';
 import { router } from './router';
 
 export const instanceRoutes = router({
@@ -20,5 +21,10 @@ export const instanceRoutes = router({
                 features: modelFeatures(model),
             })),
         );
+    },
+
+    '/api/instance/tools': async (req) => {
+        await requireUser(req);
+        return Response.json(toolMetadata());
     },
 });

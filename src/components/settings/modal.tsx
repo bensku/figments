@@ -56,6 +56,7 @@ export function SettingsModal({
                                     userDoc={userDoc}
                                     instancePersonas={instance?.personas ?? []}
                                     models={instance?.models ?? []}
+                                    tools={instance?.tools ?? []}
                                 />
                             </div>
                         )}

@@ -8,6 +8,7 @@ import {
 import type z from 'zod';
 import type { PersonaConfig } from '@/config/schema';
 import type { Feature } from '@/llm/feature';
+import type { ToolMeta } from '@/llm/tool/types';
 
 type Persona = z.output<typeof PersonaConfig>;
 
@@ -20,6 +21,7 @@ export interface Model {
 interface InstanceData {
     personas: Persona[];
     models: Model[];
+    tools: ToolMeta[];
 }
 
 interface InstanceContextValue {
@@ -48,8 +50,14 @@ export function InstanceProvider({ children }: InstanceProviderProps) {
                 if (!res.ok) throw new Error('Failed to fetch instance models');
                 return res.json() as Promise<Model[]>;
             }),
+            fetch('/api/instance/tools').then((res) => {
+                if (!res.ok) throw new Error('Failed to fetch instance tools');
+                return res.json() as Promise<ToolMeta[]>;
+            }),
         ])
-            .then(([personas, models]) => setData({ personas, models }))
+            .then(([personas, models, tools]) =>
+                setData({ personas, models, tools }),
+            )
             .catch(console.error)
             .finally(() => setLoading(false));
     }, []);

@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Select } from '@/components/ui/select';
-import type { FeatureConfig } from '@/config/schema';
+import type { FeatureConfig, ToolConfig } from '@/config/schema';
 import type { Model } from '@/context/instance';
 import { useAutoExpandingTextarea } from '@/hooks/useAutoExpandingTextarea';
 import { useAutoFocus } from '@/hooks/useAutoFocus';
+import type { ToolMeta } from '@/llm/tool/types';
 import type { Persona } from '@/tables/persona';
 import { cn } from '@/utils/cn';
 import { CollapsibleTextarea } from './collapsible-textarea';
 import { FeatureList } from './feature-list';
 import { SPACING } from './styles';
+import { ToolList } from './tool-list';
 
 type FormMode = 'view' | 'edit' | 'create';
 
@@ -16,6 +18,7 @@ interface PersonaFormProps {
     mode: FormMode;
     persona?: Partial<Persona>;
     models: Model[];
+    tools: ToolMeta[];
     onSave?: (persona: Persona) => void;
     onCancel?: () => void;
     showImportByDefault?: boolean;
@@ -25,6 +28,7 @@ export function PersonaForm({
     mode,
     persona,
     models,
+    tools,
     onSave,
     onCancel,
     showImportByDefault = false,
@@ -45,6 +49,9 @@ export function PersonaForm({
     const [features, setFeatures] = useState<FeatureConfig[]>(
         persona?.features ?? [],
     );
+    const [enabledTools, setEnabledTools] = useState<ToolConfig[]>(
+        persona?.tools ?? [],
+    );
 
     // Reset form state when persona changes (e.g., navigating between personas)
     // We intentionally only depend on persona?.key to reset when switching personas,
@@ -57,6 +64,7 @@ export function PersonaForm({
         setPromptSuffix(persona?.promptSuffix ?? '');
         setImportByDefault(persona?.importByDefault ?? false);
         setFeatures(persona?.features ?? []);
+        setEnabledTools(persona?.tools ?? []);
     }, [persona?.key]);
 
     // Get available features for the selected model
@@ -84,6 +92,34 @@ export function PersonaForm({
 
     const removeFeature = (featureId: string) => {
         setFeatures(features.filter((f) => f.feature !== featureId));
+    };
+
+    const enableTool = (toolId: string) => {
+        setEnabledTools([...enabledTools, { tool: toolId, options: {} }]);
+    };
+
+    const disableTool = (toolId: string) => {
+        setEnabledTools(enabledTools.filter((t) => t.tool !== toolId));
+    };
+
+    const updateToolOption = (toolId: string, key: string, value: unknown) => {
+        setEnabledTools(
+            enabledTools.map((t) =>
+                t.tool === toolId
+                    ? { ...t, options: { ...t.options, [key]: value } }
+                    : t,
+            ),
+        );
+    };
+
+    const resetToolOption = (toolId: string, key: string) => {
+        setEnabledTools(
+            enabledTools.map((t) => {
+                if (t.tool !== toolId) return t;
+                const { [key]: _, ...rest } = t.options;
+                return { ...t, options: rest };
+            }),
+        );
     };
 
     const titleInputRef = useRef<HTMLInputElement>(null);
@@ -129,6 +165,7 @@ export function PersonaForm({
             promptSuffix: promptSuffix.trim() || null,
             importByDefault: showImportByDefault ? importByDefault : null,
             features,
+            tools: enabledTools,
         };
 
         onSave?.(newPersona);
@@ -254,6 +291,23 @@ export function PersonaForm({
                             values={features}
                             onUpdate={updateFeature}
                             onRemove={removeFeature}
+                            isReadOnly={isReadOnly}
+                        />
+                    </div>
+                )}
+
+                {tools.length > 0 && (
+                    <div className="pt-2 border-t border-gray-100">
+                        <span className="block text-xs font-medium text-gray-700 mb-2">
+                            Tools
+                        </span>
+                        <ToolList
+                            tools={tools}
+                            values={enabledTools}
+                            onEnable={enableTool}
+                            onDisable={disableTool}
+                            onUpdateOption={updateToolOption}
+                            onResetOption={resetToolOption}
                             isReadOnly={isReadOnly}
                         />
                     </div>

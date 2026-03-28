@@ -18,7 +18,17 @@ const SearchToolConfig = z.object({
         .max(20)
         .default(10)
         .describe('Maximum search result count'),
-    mode: z.enum(['one-shot', 'agentic', 'fast']).default('agentic'),
+    mode: z
+        .enum(['one-shot', 'agentic', 'fast'])
+        .default('agentic')
+        .describe(
+            `Search mode. 'agentic' saves tokens, 'fast' is faster. 'one-shot' might help if the model does not support interleaved thinking, but uses more tokens per call.`,
+        ),
+    maxCharsPerResult: z
+        .int()
+        .min(1000)
+        .default(5000)
+        .describe('Maximum characters per search result'),
 });
 
 const ExtractToolConfig = z.object({
@@ -26,7 +36,7 @@ const ExtractToolConfig = z.object({
         .int()
         .min(1000)
         .default(5000)
-        .describe('Maximum characters per URL'),
+        .describe('Maximum characters per fetched URL'),
 });
 
 interface ParallelSearchResult {
@@ -94,7 +104,7 @@ registerTool('parallel_web_search', SearchToolConfig, (config) => {
                     search_queries,
                     max_results: config.maxResults,
                     excerpts: {
-                        max_chars_per_result: 5000,
+                        max_chars_per_result: config.maxCharsPerResult,
                     },
                 }),
             });

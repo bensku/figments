@@ -1,6 +1,7 @@
 import type { Tool } from 'ai';
-import type z from 'zod';
+import z from 'zod';
 import type { Persona } from '@/tables/persona';
+import type { ToolFieldMeta, ToolMeta } from './types';
 
 interface ToolEntry {
     id: string;
@@ -46,4 +47,119 @@ export function toolsForPersona(persona: Persona): Record<string, Tool> {
     }
 
     return tools;
+}
+
+function introspectField(key: string, schema: unknown): ToolFieldMeta | null {
+    let inner = schema;
+    let defaultValue: unknown;
+    let description: string | undefined;
+
+    // Capture description from outermost level
+    if (
+        inner &&
+        typeof inner === 'object' &&
+        'description' in inner &&
+        typeof (inner as { description: unknown }).description === 'string'
+    ) {
+        description = (inner as { description: string }).description;
+    }
+
+    // Unwrap ZodDefault
+    if (inner instanceof z.ZodDefault) {
+        defaultValue = inner._def.defaultValue;
+        inner = inner._def.innerType;
+    }
+
+    // Capture description from inner if not found on outer
+    if (
+        !description &&
+        inner &&
+        typeof inner === 'object' &&
+        'description' in inner &&
+        typeof (inner as { description: unknown }).description === 'string'
+    ) {
+        description = (inner as { description: string }).description;
+    }
+
+    if (inner instanceof z.ZodNumber) {
+        const isInt =
+            'isInt' in inner && (inner as { isInt: unknown }).isInt === true;
+        const rawMin =
+            'minValue' in inner
+                ? ((inner as { minValue: unknown }).minValue as
+                      | number
+                      | undefined)
+                : undefined;
+        const rawMax =
+            'maxValue' in inner
+                ? ((inner as { maxValue: unknown }).maxValue as
+                      | number
+                      | undefined)
+                : undefined;
+        // Filter out Zod's implicit bounds (MIN/MAX_SAFE_INTEGER)
+        const minValue =
+            rawMin != null && rawMin > Number.MIN_SAFE_INTEGER
+                ? rawMin
+                : undefined;
+        const maxValue =
+            rawMax != null && rawMax < Number.MAX_SAFE_INTEGER
+                ? rawMax
+                : undefined;
+        return {
+            type: isInt ? 'int' : 'number',
+            key,
+            description,
+            default: defaultValue as number | undefined,
+            min: minValue,
+            max: maxValue,
+        };
+    }
+
+    if (inner instanceof z.ZodEnum) {
+        const enumObj = (inner as { enum: Record<string, string> }).enum;
+        return {
+            type: 'enum',
+            key,
+            description,
+            default: defaultValue as string | undefined,
+            values: Object.values(enumObj),
+        };
+    }
+
+    if (inner instanceof z.ZodString) {
+        return {
+            type: 'string',
+            key,
+            description,
+            default: defaultValue as string | undefined,
+        };
+    }
+
+    if (inner instanceof z.ZodBoolean) {
+        return {
+            type: 'boolean',
+            key,
+            description,
+            default: defaultValue as boolean | undefined,
+        };
+    }
+
+    return null;
+}
+
+/**
+ * Returns metadata for all registered tools, suitable for sending to the client.
+ */
+export function toolMetadata(): ToolMeta[] {
+    return ALL_TOOLS.map((entry) => {
+        const schema = entry.config as z.ZodObject;
+        const fields: ToolFieldMeta[] = [];
+        for (const [key, fieldSchema] of Object.entries(schema.shape)) {
+            const field = introspectField(key, fieldSchema);
+            if (field) {
+                fields.push(field);
+            }
+        }
+        return { id: entry.id, fields };
+    });
 }

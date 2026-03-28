@@ -162,3 +162,4 @@ export const Config = z.object({
 export type Config = z.output<typeof Config>;
 export type ModelConfig = z.output<typeof ModelConfig>;
 export type FeatureConfig = z.output<typeof FeatureConfig>;
+export type ToolConfig = z.output<typeof ToolConfig>;

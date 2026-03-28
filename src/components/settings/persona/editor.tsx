@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type * as Y from 'yjs';
 import { Tabs } from '@/components/ui/tabs';
 import type { Model } from '@/context/instance';
+import type { ToolMeta } from '@/llm/tool/types';
 import { type Persona, PersonaTable } from '@/tables/persona';
 import { deepEqual } from '@/utils/equal';
 import { PersonaForm } from './editor-form';
@@ -27,6 +28,7 @@ export interface PersonaEditorProps {
     userDoc: Y.Doc;
     instancePersonas: Persona[];
     models: Model[];
+    tools: ToolMeta[];
 }
 
 export function PersonaEditor({
@@ -36,6 +38,7 @@ export function PersonaEditor({
     userDoc,
     instancePersonas,
     models,
+    tools,
 }: PersonaEditorProps) {
     const hasSpace = !!spaceDoc;
     const effectiveDefaultView = hasSpace ? defaultView : 'user';
@@ -172,6 +175,7 @@ export function PersonaEditor({
                             mode="view"
                             persona={editorState.persona}
                             models={models}
+                            tools={tools}
                             showImportByDefault={editorState.source === 'user'}
                         />
                     </div>
@@ -187,6 +191,7 @@ export function PersonaEditor({
                         <PersonaForm
                             mode="create"
                             models={models}
+                            tools={tools}
                             onSave={handleSave}
                             onCancel={handleCancel}
                             showImportByDefault={editorState.target === 'user'}
@@ -205,6 +210,7 @@ export function PersonaEditor({
                             mode="edit"
                             persona={editorState.persona}
                             models={models}
+                            tools={tools}
                             onSave={handleSave}
                             onCancel={handleCancel}
                             showImportByDefault={editorState.target === 'user'}
