@@ -281,7 +281,7 @@ function SpaceList({
                                     href={`/space/${space.key}`}
                                     className={`
                                         w-full text-left px-3 py-2 rounded-lg text-sm
-                                        transition-colors block
+                                        transition-colors block truncate
                                         ${
                                             space.key === openSpace
                                                 ? 'bg-blue-100 text-blue-800 font-medium'
