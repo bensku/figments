@@ -1,6 +1,9 @@
 import type { Tool } from 'ai';
+import type * as Y from 'yjs';
 import z from 'zod';
 import type { Persona } from '@/tables/persona';
+import { getPersona } from '../persona';
+import { agentToTool } from './agent';
 import type { ToolFieldMeta, ToolMeta } from './types';
 
 interface ToolEntry {
@@ -25,11 +28,21 @@ export function registerTool<T extends z.ZodObject>(
 
 /**
  * Gets local tools for given persona, ready to be given to AI SDK.
+ * @param doc Current space's Y.Doc.
+ * @param userId User id. This and space id are needed to create agent tools,
+ * which use these details for access control.
+ * @param spaceId Space id. Needed for same reason as user id.
  * @param persona Persona.
  * @returns Dictionary of tools, possibly empty.
  */
-export function toolsForPersona(persona: Persona): Record<string, Tool> {
+export function toolsForPersona(
+    doc: Y.Doc,
+    userId: string,
+    spaceId: string,
+    persona: Persona,
+): Record<string, Tool> {
     const tools: Record<string, Tool> = {};
+    // Client-side (i.e. Figments-executed) tools
     for (const config of persona.tools) {
         const entry = TOOL_MAP.get(config.tool);
         if (!entry) {
@@ -44,6 +57,25 @@ export function toolsForPersona(persona: Persona): Record<string, Tool> {
         }
         // TODO validate tool config against schema somewhere (at boot?), but not here!
         tools[config.tool] = entry.factory(config);
+    }
+
+    // Agents using the agent tool
+    if (persona.agentCallMode === 'tool') {
+        // One tool per agent
+        for (const agentId of persona.agents) {
+            const agent = getPersona(doc, agentId);
+            if (agent) {
+                tools[agentId] = agentToTool(agent, doc, userId, spaceId);
+            } else {
+                console.warn(
+                    'Agent',
+                    agentId,
+                    'used by persona',
+                    persona.key,
+                    'does not exist',
+                );
+            }
+        }
     }
 
     return tools;

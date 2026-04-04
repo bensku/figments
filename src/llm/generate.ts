@@ -154,7 +154,7 @@ export async function generateFragments(
             // Get persona's tools, including model features that are represented as AI SDK's tools
             tools: {
                 ...personaToTools(model.config.provider, persona), // Model features to tools
-                ...toolsForPersona(persona), // Local (Figments-provided) tools
+                ...toolsForPersona(doc, userId, spaceId, persona), // Local (Figments-provided) tools and agents
             },
             // Do same for features implemented with provider-specific API options
             providerOptions: personaToProviderOptions(
@@ -165,7 +165,7 @@ export async function generateFragments(
             headers: personaToHeaders(model.config.provider, persona),
             // Enable raw chunks to access web search citations (AI SDK filters them out)
             includeRawChunks: true,
-            stopWhen: stepCountIs(10), // TODO configurable tool step count
+            stopWhen: stepCountIs(persona.maxToolCalls),
         });
 
         // Stream parts and create/update fragments as needed

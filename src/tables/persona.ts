@@ -44,6 +44,7 @@ export type Persona = Row<typeof PersonaTable>;
 
 /**
  * Syncs user personas with importByDefault flag set to a space.
+ * Also imports any agents referenced by those presets.
  * @param userDb
  * @param spaceDb
  */
@@ -54,6 +55,27 @@ export function importUserPersonas(userDb: Y.Doc, spaceDb: Y.Doc) {
         const targetPersona = getKey(spaceDb, PersonaTable, persona.key);
         if (!deepEqual(persona, targetPersona)) {
             upsert(spaceDb, PersonaTable, persona);
+        }
+        importReferencedAgents(userDb, spaceDb, persona);
+    }
+}
+
+/**
+ * Imports agents referenced by a persona from the user doc to the space doc.
+ * This ensures presets work correctly even if their agents don't have
+ * importByDefault set.
+ */
+export function importReferencedAgents(
+    userDb: Y.Doc,
+    spaceDb: Y.Doc,
+    persona: Persona,
+) {
+    for (const agentKey of persona.agents) {
+        const agent = getKey(userDb, PersonaTable, agentKey);
+        if (!agent) continue;
+        const existing = getKey(spaceDb, PersonaTable, agentKey);
+        if (!deepEqual(agent, existing)) {
+            upsert(spaceDb, PersonaTable, agent);
         }
     }
 }

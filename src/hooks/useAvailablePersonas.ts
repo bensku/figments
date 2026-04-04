@@ -67,7 +67,9 @@ export function useAvailablePersonas(spaceDoc: Y.Doc) {
             (p): PersonaWithSource => ({ persona: p, source: 'instance' }),
         );
 
-        return [...spaceOnly, ...userSynced, ...instanceList];
+        return [...spaceOnly, ...userSynced, ...instanceList].filter(
+            ({ persona }) => (persona.type ?? 'preset') === 'preset',
+        );
     }, [instancePersonas, spacePersonas, userPersonas]);
 
     const allPersonas = useMemo(

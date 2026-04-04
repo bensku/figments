@@ -22,7 +22,9 @@ type EditorState =
     | { mode: 'edit'; persona: Persona; target: 'user' | 'space' };
 
 export interface PersonaEditorProps {
-    defaultView?: ViewType;
+    activeView: ViewType;
+    onViewChange: (view: ViewType) => void;
+    personaType?: 'preset' | 'agent';
     isOpen: boolean;
     spaceDoc: Y.Doc | null;
     userDoc: Y.Doc;
@@ -32,7 +34,9 @@ export interface PersonaEditorProps {
 }
 
 export function PersonaEditor({
-    defaultView = 'user',
+    activeView,
+    onViewChange,
+    personaType = 'preset',
     isOpen,
     spaceDoc,
     userDoc,
@@ -41,10 +45,7 @@ export function PersonaEditor({
     tools,
 }: PersonaEditorProps) {
     const hasSpace = !!spaceDoc;
-    const effectiveDefaultView = hasSpace ? defaultView : 'user';
 
-    const [activeView, setActiveView] =
-        useState<ViewType>(effectiveDefaultView);
     const [editorState, setEditorState] = useState<EditorState>({
         mode: 'list',
     });
@@ -61,13 +62,12 @@ export function PersonaEditor({
         [hasSpace],
     );
 
-    // Reset to default view when modal opens
+    // Reset editor state when modal opens
     useEffect(() => {
         if (isOpen) {
-            setActiveView(effectiveDefaultView);
             setEditorState({ mode: 'list' });
         }
-    }, [isOpen, effectiveDefaultView]);
+    }, [isOpen]);
 
     // Query personas from each source
     // Note: React hooks must be called unconditionally, so we query userDoc as
@@ -114,10 +114,27 @@ export function PersonaEditor({
         };
     }, [spacePersonas, userPersonas]);
 
+    // Collect all agent personas for the agent picker (used when editing presets)
+    const availableAgents = useMemo(() => {
+        const byKey = new Map<string, Persona>();
+        for (const p of instancePersonas) {
+            if ((p.type ?? 'preset') === 'agent') byKey.set(p.key, p);
+        }
+        for (const p of spacePersonas) {
+            if ((p.type ?? 'preset') === 'agent') byKey.set(p.key, p);
+        }
+        for (const p of userPersonas) {
+            if ((p.type ?? 'preset') === 'agent') byKey.set(p.key, p);
+        }
+        return [...byKey.values()];
+    }, [instancePersonas, spacePersonas, userPersonas]);
+
+    const typeLabel = personaType === 'agent' ? 'Agent' : 'Preset';
+
     const actions = usePersonaActions({ userDoc, spaceDoc });
 
     const handleTabChange = (tabId: string) => {
-        setActiveView(tabId as ViewType);
+        onViewChange(tabId as ViewType);
         setEditorState({ mode: 'list' });
     };
 
@@ -168,14 +185,16 @@ export function PersonaEditor({
                 return (
                     <div className="flex flex-col h-full w-full">
                         <EditorHeader
-                            title="View Preset"
+                            title={`View ${typeLabel}`}
                             onBack={handleCancel}
                         />
                         <PersonaForm
                             mode="view"
+                            personaType={editorState.persona.type ?? 'preset'}
                             persona={editorState.persona}
                             models={models}
                             tools={tools}
+                            availableAgents={availableAgents}
                             showImportByDefault={editorState.source === 'user'}
                         />
                     </div>
@@ -185,13 +204,15 @@ export function PersonaEditor({
                 return (
                     <div className="flex flex-col h-full w-full">
                         <EditorHeader
-                            title={`Create ${editorState.target === 'user' ? 'User' : 'Space'} Preset`}
+                            title={`Create ${editorState.target === 'user' ? 'User' : 'Space'} ${typeLabel}`}
                             onBack={handleCancel}
                         />
                         <PersonaForm
                             mode="create"
+                            personaType={personaType}
                             models={models}
                             tools={tools}
+                            availableAgents={availableAgents}
                             onSave={handleSave}
                             onCancel={handleCancel}
                             showImportByDefault={editorState.target === 'user'}
@@ -203,14 +224,16 @@ export function PersonaEditor({
                 return (
                     <div className="flex flex-col h-full w-full">
                         <EditorHeader
-                            title="Edit Preset"
+                            title={`Edit ${typeLabel}`}
                             onBack={handleCancel}
                         />
                         <PersonaForm
                             mode="edit"
+                            personaType={editorState.persona.type ?? 'preset'}
                             persona={editorState.persona}
                             models={models}
                             tools={tools}
+                            availableAgents={availableAgents}
                             onSave={handleSave}
                             onCancel={handleCancel}
                             showImportByDefault={editorState.target === 'user'}
@@ -253,6 +276,7 @@ export function PersonaEditor({
                         <div className="flex-1 overflow-y-auto overflow-x-hidden">
                             <PersonaList
                                 view={activeView}
+                                personaType={personaType}
                                 instancePersonas={instancePersonas}
                                 userPersonas={userPersonas}
                                 spacePersonas={spacePersonas}

@@ -9,6 +9,7 @@ const sortByTitle = (a: Persona, b: Persona) => a.title.localeCompare(b.title);
 
 interface PersonaListProps {
     view: ViewType;
+    personaType: 'preset' | 'agent';
     instancePersonas: Persona[];
     userPersonas: Persona[];
     spacePersonas?: Persona[];
@@ -25,9 +26,10 @@ interface PersonaListProps {
 
 export function PersonaList({
     view,
-    instancePersonas,
-    userPersonas,
-    spacePersonas = [],
+    personaType,
+    instancePersonas: allInstancePersonas,
+    userPersonas: allUserPersonas,
+    spacePersonas: allSpacePersonas = [],
     syncedUserPersonaKeys = new Set(),
     outdatedUserPersonaKeys = new Set(),
     hasSpace = true,
@@ -37,6 +39,15 @@ export function PersonaList({
     onClone,
     onImport,
 }: PersonaListProps) {
+    const filterByType = (personas: Persona[]) =>
+        personas.filter((p) => (p.type ?? 'preset') === personaType);
+
+    const instancePersonas = filterByType(allInstancePersonas);
+    const userPersonas = filterByType(allUserPersonas);
+    const spacePersonas = filterByType(allSpacePersonas);
+
+    const typeLabel = personaType === 'agent' ? 'agents' : 'presets';
+
     // View-aware empty check
     const isSpaceViewEmpty =
         spacePersonas.length === 0 &&
@@ -60,11 +71,11 @@ export function PersonaList({
                 />
                 <p className="text-sm">
                     {view === 'space'
-                        ? 'No presets in this space'
-                        : 'No user presets yet'}
+                        ? `No ${typeLabel} in this space`
+                        : `No user ${typeLabel} yet`}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                    Create a new preset to get started
+                    Create a new {personaType} to get started
                 </p>
             </div>
         );

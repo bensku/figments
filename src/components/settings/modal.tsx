@@ -22,13 +22,18 @@ export function SettingsModal({
     const { spaceDoc } = useSpace();
     const { data: instance, loading: instanceLoading } = useInstance();
     const [activeTab, setActiveTab] = useState<SettingsTab>(defaultTab);
+    const defaultPersonaView = spaceDoc ? 'space' : 'user';
+    const [personaView, setPersonaView] = useState<'space' | 'user'>(
+        defaultPersonaView,
+    );
 
-    // Reset to default tab when modal opens
+    // Reset to defaults when modal opens
     useEffect(() => {
         if (isOpen) {
             setActiveTab(defaultTab);
+            setPersonaView(defaultPersonaView);
         }
-    }, [isOpen, defaultTab]);
+    }, [isOpen, defaultTab, defaultPersonaView]);
 
     const isUserReady = !instanceLoading && userDoc;
 
@@ -46,11 +51,18 @@ export function SettingsModal({
                                 <GeneralSettings userDoc={userDoc} />
                             </div>
                         )}
-                        {activeTab === 'personas' && (
+                        {(activeTab === 'personas' ||
+                            activeTab === 'agents') && (
                             <div className="h-full w-full">
                                 <PersonaEditor
                                     key={activeTab}
-                                    defaultView={spaceDoc ? 'space' : 'user'}
+                                    activeView={personaView}
+                                    onViewChange={setPersonaView}
+                                    personaType={
+                                        activeTab === 'agents'
+                                            ? 'agent'
+                                            : 'preset'
+                                    }
                                     isOpen={isOpen}
                                     spaceDoc={spaceDoc}
                                     userDoc={userDoc}
@@ -69,7 +81,7 @@ export function SettingsModal({
     );
 }
 
-export type SettingsTab = 'general' | 'personas';
+export type SettingsTab = 'general' | 'personas' | 'agents';
 
 interface SettingsSidebarProps {
     activeTab: SettingsTab;
@@ -79,6 +91,7 @@ interface SettingsSidebarProps {
 const TABS: Array<{ id: SettingsTab; label: string }> = [
     { id: 'general', label: 'General' },
     { id: 'personas', label: 'Presets' },
+    { id: 'agents', label: 'Agents' },
 ];
 
 function SettingsSidebar({ activeTab, onTabChange }: SettingsSidebarProps) {

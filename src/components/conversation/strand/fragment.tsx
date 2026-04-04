@@ -13,6 +13,7 @@ import Markdown, { type Components } from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
 import { useSpace } from '@/context/space';
+import { usePersona } from '@/hooks/usePersonas';
 import type { Citation } from '@/llm/citation';
 import type { FragmentTable } from '@/tables/node';
 import {
@@ -20,6 +21,7 @@ import {
     GenericToolResultRenderer,
     toolCallRenderers,
 } from './tools';
+import { AgentCallRenderer, isAgentCallInput } from './tools/agent-call';
 
 type Fragment = Row<typeof FragmentTable>;
 type FragmentData = Fragment['data'];
@@ -315,9 +317,20 @@ interface ToolCallFragmentProps extends FragmentProps<'toolCall'> {
 export function ToolCallFragment({ fragment, result }: ToolCallFragmentProps) {
     const { toolName, input } = fragment.data;
     const SpecialRenderer = toolCallRenderers[toolName];
+    const agentPersona = usePersona(toolName);
 
     if (SpecialRenderer) {
         return <SpecialRenderer input={input} result={result} />;
+    }
+
+    if (agentPersona?.type === 'agent' && isAgentCallInput(input)) {
+        return (
+            <AgentCallRenderer
+                input={input}
+                result={result}
+                agentTitle={agentPersona.title}
+            />
+        );
     }
 
     return (

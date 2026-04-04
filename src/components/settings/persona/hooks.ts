@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 import type * as Y from 'yjs';
 import {
     deletePersona,
+    importReferencedAgents,
     importUserPersonas,
     type Persona,
     PersonaTable,
@@ -109,8 +110,13 @@ export function usePersonaActions({
                 importByDefault: null,
             };
             upsert(spaceDoc, PersonaTable, importedPersona);
+
+            // Also import any agents this preset references
+            if (userDoc) {
+                importReferencedAgents(userDoc, spaceDoc, persona);
+            }
         },
-        [spaceDoc],
+        [userDoc, spaceDoc],
     );
 
     return {

@@ -7,6 +7,7 @@ import { useAutoFocus } from '@/hooks/useAutoFocus';
 import type { ToolMeta } from '@/llm/tool/types';
 import type { Persona } from '@/tables/persona';
 import { cn } from '@/utils/cn';
+import { AgentList } from './agent-list';
 import { CollapsibleTextarea } from './collapsible-textarea';
 import { FeatureList } from './feature-list';
 import { SPACING } from './styles';
@@ -16,9 +17,11 @@ type FormMode = 'view' | 'edit' | 'create';
 
 interface PersonaFormProps {
     mode: FormMode;
+    personaType: 'preset' | 'agent';
     persona?: Partial<Persona>;
     models: Model[];
     tools: ToolMeta[];
+    availableAgents?: Persona[];
     onSave?: (persona: Persona) => void;
     onCancel?: () => void;
     showImportByDefault?: boolean;
@@ -26,9 +29,11 @@ interface PersonaFormProps {
 
 export function PersonaForm({
     mode,
+    personaType,
     persona,
     models,
     tools,
+    availableAgents = [],
     onSave,
     onCancel,
     showImportByDefault = false,
@@ -52,6 +57,16 @@ export function PersonaForm({
     const [enabledTools, setEnabledTools] = useState<ToolConfig[]>(
         persona?.tools ?? [],
     );
+    const [agents, setAgents] = useState<string[]>(persona?.agents ?? []);
+    const [maxToolCalls, setMaxToolCalls] = useState(
+        persona?.maxToolCalls ?? 10,
+    );
+    const [agentDescription, setAgentDescription] = useState(
+        persona?.agentConfig?.description ?? '',
+    );
+    const [agentLoopType, setAgentLoopType] = useState(
+        persona?.agentConfig?.loopType ?? 'interleavedThinking',
+    );
 
     // Reset form state when persona changes (e.g., navigating between personas)
     // We intentionally only depend on persona?.key to reset when switching personas,
@@ -65,6 +80,12 @@ export function PersonaForm({
         setImportByDefault(persona?.importByDefault ?? false);
         setFeatures(persona?.features ?? []);
         setEnabledTools(persona?.tools ?? []);
+        setAgents(persona?.agents ?? []);
+        setMaxToolCalls(persona?.maxToolCalls ?? 10);
+        setAgentDescription(persona?.agentConfig?.description ?? '');
+        setAgentLoopType(
+            persona?.agentConfig?.loopType ?? 'interleavedThinking',
+        );
     }, [persona?.key]);
 
     // Get available features for the selected model
@@ -128,6 +149,10 @@ export function PersonaForm({
         useAutoExpandingTextarea();
     const { ref: promptSuffixRef, adjustHeight: adjustPromptSuffixHeight } =
         useAutoExpandingTextarea();
+    const {
+        ref: agentDescriptionRef,
+        adjustHeight: adjustAgentDescriptionHeight,
+    } = useAutoExpandingTextarea();
 
     // Track which optional fields are expanded
     const [showSystemPrompt, setShowSystemPrompt] = useState(
@@ -148,7 +173,20 @@ export function PersonaForm({
     useEffect(() => {
         adjustSystemPromptHeight();
         adjustPromptSuffixHeight();
-    }, [adjustSystemPromptHeight, adjustPromptSuffixHeight]);
+        adjustAgentDescriptionHeight();
+    }, [
+        adjustSystemPromptHeight,
+        adjustPromptSuffixHeight,
+        adjustAgentDescriptionHeight,
+    ]);
+
+    const toggleAgent = (agentKey: string) => {
+        setAgents((prev) =>
+            prev.includes(agentKey)
+                ? prev.filter((k) => k !== agentKey)
+                : [...prev, agentKey],
+        );
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -156,16 +194,30 @@ export function PersonaForm({
         if (!title.trim() || !model) {
             return;
         }
+        if (personaType === 'agent' && !agentDescription.trim()) {
+            return;
+        }
 
         const newPersona: Persona = {
             key: persona?.key ?? crypto.randomUUID(),
             title: title.trim(),
             model,
+            type: personaType,
             systemPrompt: systemPrompt.trim() || null,
             promptSuffix: promptSuffix.trim() || null,
             importByDefault: showImportByDefault ? importByDefault : null,
             features,
             tools: enabledTools,
+            agents: personaType === 'preset' ? agents : [],
+            maxToolCalls,
+            agentCallMode: 'tool',
+            agentConfig:
+                personaType === 'agent'
+                    ? {
+                          description: agentDescription.trim(),
+                          loopType: agentLoopType,
+                      }
+                    : undefined,
         };
 
         onSave?.(newPersona);
@@ -222,6 +274,66 @@ export function PersonaForm({
                         />
                     </div>
                 </div>
+
+                {/* Agent config section (agent personas only) */}
+                {personaType === 'agent' && (
+                    <div
+                        className={`${SPACING.SECTION_GAP} pt-2 border-t border-gray-100`}
+                    >
+                        <div>
+                            <label
+                                htmlFor="agentDescription"
+                                className="block text-xs font-medium text-gray-700 mb-1"
+                            >
+                                Description
+                            </label>
+                            <textarea
+                                ref={agentDescriptionRef}
+                                id="agentDescription"
+                                value={agentDescription}
+                                onChange={(e) => {
+                                    setAgentDescription(e.target.value);
+                                    adjustAgentDescriptionHeight();
+                                }}
+                                disabled={isReadOnly}
+                                placeholder="Describe the agent's purpose and when to use it"
+                                rows={2}
+                                className={cn(
+                                    'w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-md',
+                                    'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
+                                    'resize-none overflow-hidden placeholder:text-gray-400',
+                                    isReadOnly && 'bg-gray-100 text-gray-500',
+                                )}
+                                required
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                                Shown to models that call this agent
+                            </p>
+                        </div>
+                        <div>
+                            <label
+                                htmlFor="agentLoopType"
+                                className="block text-xs font-medium text-gray-700 mb-1"
+                            >
+                                Loop Type
+                            </label>
+                            <Select
+                                id="agentLoopType"
+                                options={[
+                                    {
+                                        value: 'interleavedThinking',
+                                        label: 'Interleaved Thinking',
+                                    },
+                                ]}
+                                value={agentLoopType}
+                                onChange={(v) =>
+                                    setAgentLoopType(v as typeof agentLoopType)
+                                }
+                                disabled={isReadOnly}
+                            />
+                        </div>
+                    </div>
+                )}
 
                 {/* Prompts section */}
                 <div className={`${SPACING.SECTION_GAP} pt-2`}>
@@ -312,6 +424,49 @@ export function PersonaForm({
                         />
                     </div>
                 )}
+
+                {personaType === 'preset' && (
+                    <div className="pt-2 border-t border-gray-100">
+                        <span className="block text-xs font-medium text-gray-700 mb-2">
+                            Agents
+                        </span>
+                        <AgentList
+                            availableAgents={availableAgents}
+                            selectedAgents={agents}
+                            onToggle={toggleAgent}
+                            isReadOnly={isReadOnly}
+                        />
+                    </div>
+                )}
+
+                <div className="pt-2 border-t border-gray-100">
+                    <label
+                        htmlFor="maxToolCalls"
+                        className="block text-xs font-medium text-gray-700 mb-1"
+                    >
+                        Max Tool Calls
+                    </label>
+                    <input
+                        id="maxToolCalls"
+                        type="number"
+                        min={1}
+                        value={maxToolCalls}
+                        onChange={(e) =>
+                            setMaxToolCalls(
+                                Math.max(
+                                    1,
+                                    Number.parseInt(e.target.value, 10) || 1,
+                                ),
+                            )
+                        }
+                        disabled={isReadOnly}
+                        className={cn(
+                            'w-20 px-2.5 py-1.5 text-sm border border-gray-300 rounded-md',
+                            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
+                            isReadOnly && 'bg-gray-100 text-gray-500',
+                        )}
+                    />
+                </div>
             </div>
 
             {!isReadOnly && (
