@@ -152,10 +152,10 @@ export const StrandNode = memo(function StrandNode({
         'content',
     );
 
-    // Sort fragments by createdAt and group consecutive text fragments
+    // Sort fragments by offset and group consecutive text fragments
     // Must be before early return to satisfy React hooks rules
     const fragmentGroups = useMemo(() => {
-        const sorted = [...fragments].sort((a, b) => a.createdAt - b.createdAt);
+        const sorted = [...fragments].sort((a, b) => a.offset - b.offset);
         return groupFragments(sorted);
     }, [fragments]);
 

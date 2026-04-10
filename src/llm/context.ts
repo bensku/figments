@@ -46,7 +46,7 @@ export async function loadContext(
             FragmentTable,
             and(eq('node', node.key), eq('role', 'main')),
         );
-        fragments.sort((a, b) => a.createdAt - b.createdAt);
+        fragments.sort((a, b) => a.offset - b.offset);
         futures.push(
             toMessages(
                 userId,

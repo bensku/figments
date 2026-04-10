@@ -85,6 +85,12 @@ export const FragmentTable = table(
         role: z.enum(['main']),
 
         /**
+         * Offset in node. Fragments are sorted by their offsets in ascending
+         * order.
+         */
+        offset: z.int(),
+
+        /**
          * When this fragment was created. This is used to sort fragments of
          * same role in the UI.
          */

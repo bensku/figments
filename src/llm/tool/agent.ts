@@ -71,6 +71,7 @@ export function agentToTool(
                         key: fragmentKey,
                         node: userNode,
                         role: 'main',
+                        offset: 0,
                         createdAt: Date.now(),
                         data: {
                             type: 'text',

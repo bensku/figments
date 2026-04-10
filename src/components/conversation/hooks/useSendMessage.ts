@@ -24,8 +24,7 @@ export function useSendMessage(
 
         const parentId = parentNode?.key ?? 'root';
 
-        // Use incrementing timestamp to ensure unique ordering for fragments
-        let timestamp = Date.now();
+        let offset = 0;
 
         // Submit user message
         const nodeKey = crypto.randomUUID();
@@ -33,7 +32,7 @@ export function useSendMessage(
             key: nodeKey,
             parentId,
             role: 'user',
-            createdAt: timestamp++,
+            createdAt: Date.now(),
             author: '',
             summary: text,
             completed: true,
@@ -46,7 +45,8 @@ export function useSendMessage(
                 key: fragmentKey,
                 node: nodeKey,
                 role: 'main',
-                createdAt: timestamp++,
+                offset: offset++,
+                createdAt: Date.now(),
                 data: {
                     type: 'text',
                     text: new Y.Text(),
@@ -65,7 +65,8 @@ export function useSendMessage(
                 key: crypto.randomUUID(),
                 node: nodeKey,
                 role: 'main',
-                createdAt: timestamp++,
+                offset: offset++,
+                createdAt: Date.now(),
                 data: {
                     type: 'file',
                     attachmentId: file.id,

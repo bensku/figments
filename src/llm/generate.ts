@@ -39,7 +39,7 @@ export async function generateFragments(
     role: FragmentRole,
     spaceId: string,
 ) {
-    let now = Date.now();
+    let offset = 0;
     /**
      * Appends a fragment to currently generated node.
      * @param data Fragment data.
@@ -51,14 +51,17 @@ export async function generateFragments(
             key,
             node: node.key,
             role,
-            createdAt: now,
+            offset,
+            createdAt: Date.now(),
             data,
         });
-        now += 100; // FIXME very cursed
+
         // We'll need to add fragments between the current ones after the fact
         // because AI SDK's streaming support has tendency to filter "unimportant" details
         // such as entire server-side tool calls out...
         // And it turns out, LLM APIs are VERY picky about where those should be put to :/
+        offset += 100;
+
         return getKey(doc, FragmentTable, key);
     };
 
@@ -368,7 +371,8 @@ export async function generateFragments(
                 key,
                 node: node.key,
                 role,
-                createdAt: after.createdAt + 1,
+                offset: after.offset + 1,
+                createdAt: Date.now(),
                 data,
             });
         };
