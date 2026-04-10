@@ -87,7 +87,14 @@ function createLanguageModel(config: ModelConfig): LanguageModel {
 }
 
 function wrapModel(model: LanguageModel) {
-    if (process.env.NODE_ENV !== 'production') {
+    // Opt-in: devToolsMiddleware persists every run/step to a JSON file via
+    // synchronous fs.writeFileSync, which grows unboundedly and can add
+    // multiple seconds of TTFT once the DB is large. Only enable when the
+    // developer actually wants the devtools UI.
+    if (
+        process.env.NODE_ENV !== 'production' &&
+        process.env.AI_SDK_DEVTOOLS === '1'
+    ) {
         return wrapLanguageModel({
             // biome-ignore lint/suspicious/noExplicitAny: this needs LanguageModelV3, which isn't exported
             model: model as any,

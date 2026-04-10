@@ -22,6 +22,7 @@ import {
     TextFragmentGroup,
     ToolCallFragment,
 } from './fragment';
+import { NodeMetricsFooter } from './metrics';
 
 type Fragment = Row<typeof FragmentTable>;
 type FragmentData = Fragment['data'];
@@ -338,6 +339,9 @@ export const StrandNode = memo(function StrandNode({
                         </span>
                     )}
                 </div>
+
+                {/* Generation timing metrics, only on completed LLM nodes */}
+                {isLlm && node.completed && <NodeMetricsFooter nodeId={id} />}
             </div>
 
             {/* Action buttons - appear on hover, positioned absolutely */}

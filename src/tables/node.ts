@@ -44,6 +44,18 @@ export const NodeTable = table(
          * a graphic is shown to indicate the model is still generating.
          */
         completed: z.boolean(),
+
+        /**
+         * Number of input tokens reported by the model provider for this
+         * generation. Optional because not all providers report usage.
+         */
+        inputTokens: z.number().optional(),
+
+        /**
+         * Number of output tokens reported by the model provider for this
+         * generation. Optional because not all providers report usage.
+         */
+        outputTokens: z.number().optional(),
     }),
 );
 
@@ -174,6 +186,26 @@ export const ChoiceTable = table(
 );
 
 /**
+ * Node events. Used for tracking how fast things happened.
+ */
+export const EventTable = table(
+    'events',
+    z.object({
+        key: z.string(),
+        node: z.string(),
+
+        type: z.enum([
+            'generate_start',
+            'context_ready',
+            'stream_start',
+            'first_token',
+            'stream_end',
+        ]),
+        time: z.int(),
+    }),
+);
+
+/**
  * Deletes a node and all its descendants (cascade delete).
  * Also removes all fragments and choices associated with deleted nodes.
  * @param doc The Y.Doc to operate on
@@ -202,7 +234,7 @@ export function deleteNodeWithDescendants(
         i++;
     }
 
-    // Delete fragments, choices, then nodes
+    // Delete fragments, choices, events, then nodes
     for (const key of toDelete) {
         const fragments = select(doc, FragmentTable, eq('node', key));
         for (const fragment of fragments) {
@@ -211,6 +243,10 @@ export function deleteNodeWithDescendants(
         const choices = select(doc, ChoiceTable, eq('node', key));
         for (const choice of choices) {
             remove(doc, ChoiceTable, choice.key);
+        }
+        const events = select(doc, EventTable, eq('node', key));
+        for (const event of events) {
+            remove(doc, EventTable, event.key);
         }
         remove(doc, NodeTable, key);
     }

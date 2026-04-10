@@ -12,7 +12,12 @@ import z from 'zod';
 import { CONFIG } from '@/config';
 import { anthropicCacheMiddleware } from '@/llm/cache';
 import { openDocServer } from '@/sync/server';
-import { ChoiceTable, FragmentTable, NodeTable } from '@/tables/node';
+import {
+    ChoiceTable,
+    EventTable,
+    FragmentTable,
+    NodeTable,
+} from '@/tables/node';
 import { SpaceTable } from '@/tables/user';
 import {
     type Citation,
@@ -64,6 +69,15 @@ export async function generateFragments(
 
         return getKey(doc, FragmentTable, key);
     };
+    const newEvent = (type: Row<typeof EventTable>['type']) => {
+        upsert(doc, EventTable, {
+            key: crypto.randomUUID(),
+            node: node.key,
+            type,
+            time: Date.now(),
+        });
+    };
+    newEvent('generate_start'); // Started processing the generation request
 
     let persona = getPersona(doc, node.author);
     if (!persona) {
@@ -133,8 +147,11 @@ export async function generateFragments(
         persona,
         context,
     );
+    newEvent('context_ready'); // We have context as list of AI SDK messages
 
     let errored = false;
+    let inputTokens: number | undefined;
+    let outputTokens: number | undefined;
     try {
         // Wrap with cache middleware for Anthropic providers to reduce
         // input token costs during multi-step tool use
@@ -177,8 +194,12 @@ export async function generateFragments(
         let currentBlockCitations: Citation[] = [];
 
         const fragments = [];
+        let firstTokenReceived = false;
         for await (const part of result.fullStream) {
             switch (part.type) {
+                case 'start':
+                    newEvent('stream_start'); // We're connected to LLM provider!
+                    break;
                 case 'reasoning-start':
                     current = newFragment({
                         type: 'thinking',
@@ -187,6 +208,10 @@ export async function generateFragments(
                     });
                     break;
                 case 'reasoning-delta':
+                    if (!firstTokenReceived) {
+                        newEvent('first_token'); // LLM is generating something!
+                        firstTokenReceived = true;
+                    }
                     if (current?.data.type === 'thinking') {
                         current.data.text.insert(
                             current.data.text.length,
@@ -215,6 +240,10 @@ export async function generateFragments(
                     });
                     break;
                 case 'text-delta':
+                    if (!firstTokenReceived) {
+                        newEvent('first_token'); // LLM is generating something!
+                        firstTokenReceived = true;
+                    }
                     if (current?.data.type === 'text') {
                         current.data.text.insert(
                             current.data.text.length,
@@ -243,6 +272,11 @@ export async function generateFragments(
                     currentBlockCitations = [];
                     break;
                 case 'tool-call':
+                    // Unlikely but not impossible that model immediately produces a tool call
+                    if (!firstTokenReceived) {
+                        newEvent('first_token'); // LLM is generating something!
+                        firstTokenReceived = true;
+                    }
                     fragments.push(
                         newFragment({
                             type: 'toolCall',
@@ -328,6 +362,16 @@ export async function generateFragments(
                     // TODO do we need to handle this somehow?
                     break;
             }
+        }
+        newEvent('stream_end'); // And we have all the content. Ostensibly. Unfortunately...
+
+        // Capture token usage if the provider reported it
+        try {
+            const usage = await result.totalUsage;
+            inputTokens = usage.inputTokens;
+            outputTokens = usage.outputTokens;
+        } catch (e) {
+            console.warn('Failed to read totalUsage from LLM response', e);
         }
 
         // Backfill data that was not available during streaming to parts
@@ -459,6 +503,8 @@ export async function generateFragments(
     update(doc, NodeTable, {
         key: node.key,
         completed: true,
+        inputTokens,
+        outputTokens,
     });
 
     // Load context again, this time including the newly created message

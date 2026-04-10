@@ -1,11 +1,16 @@
-import { eq, getKey, remove, select } from '@bensku/y-query';
+import { eq, getKey, remove, select, update } from '@bensku/y-query';
 import { Database } from '@hocuspocus/extension-database';
 import { Hocuspocus } from '@hocuspocus/server';
 import type * as Y from 'yjs';
 import { checkAccess } from '@/auth/acl';
 import { type Session, validateId } from '@/auth/user';
 import { generateFragments } from '@/llm/generate';
-import { FragmentTable, NodeTable } from '@/tables/node';
+import {
+    ChoiceTable,
+    EventTable,
+    FragmentTable,
+    NodeTable,
+} from '@/tables/node';
 import { BLOBS } from '@/utils/blob';
 import { ClientMessage } from './messages';
 
@@ -116,6 +121,31 @@ export const hocuspocus = new Hocuspocus({
                             for (const fragment of fragments) {
                                 remove(doc, FragmentTable, fragment.key);
                             }
+                            // Wipe stale timing events from prior generation
+                            const events = select(
+                                doc,
+                                EventTable,
+                                eq('node', node.key),
+                            );
+                            for (const event of events) {
+                                remove(doc, EventTable, event.key);
+                            }
+                            // Wipe stale generated reply choices
+                            const choices = select(
+                                doc,
+                                ChoiceTable,
+                                eq('node', node.key),
+                            );
+                            for (const choice of choices) {
+                                remove(doc, ChoiceTable, choice.key);
+                            }
+                            // Clear stale token counts so they're not displayed
+                            // until the new generation reports fresh ones
+                            update(doc, NodeTable, {
+                                key: node.key,
+                                inputTokens: undefined,
+                                outputTokens: undefined,
+                            });
                         }
                         // Generate content fragments
                         await generateFragments(
