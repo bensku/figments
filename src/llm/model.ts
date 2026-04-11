@@ -1,4 +1,5 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
+import { createBaseten } from '@ai-sdk/baseten';
 import { devToolsMiddleware } from '@ai-sdk/devtools';
 import { createVertex } from '@ai-sdk/google-vertex';
 import { createVertexAnthropic } from '@ai-sdk/google-vertex/anthropic';
@@ -82,6 +83,12 @@ function createLanguageModel(config: ModelConfig): LanguageModel {
                 },
             });
             return vertexAnthropic(config.model);
+        }
+        case 'baseten': {
+            const baseten = createBaseten({
+                apiKey,
+            });
+            return baseten(config.model);
         }
     }
 }

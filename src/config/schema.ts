@@ -28,6 +28,7 @@ export const ModelProvider = z.enum([
     'openrouter',
     'vertex',
     'vertexAnthropic',
+    'baseten',
 ]);
 
 export const ModelConfig = z.object({

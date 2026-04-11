@@ -149,6 +149,19 @@ export function personaToProviderOptions(
                 google: options,
             };
         }
+        case 'baseten': {
+            const reasoning =
+                featureValue(persona, 'alwaysThinking') === true ||
+                featureValue(persona, 'thinking') === true;
+            const options = {
+                chat_template_args: {
+                    enable_thinking: reasoning,
+                },
+            };
+            return {
+                baseten: options,
+            };
+        }
         default:
             return {};
     }

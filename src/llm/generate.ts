@@ -31,6 +31,7 @@ import {
     personaToProviderOptions,
     personaToTools,
 } from './feature/adapter';
+import { PROVIDER_QUIRKS } from './feature/quirk';
 import { MODEL_MAP } from './model';
 import { getPersona } from './persona';
 import { toolsForPersona } from './tool';
@@ -67,7 +68,8 @@ export async function generateFragments(
         // And it turns out, LLM APIs are VERY picky about where those should be put to :/
         offset += 100;
 
-        return getKey(doc, FragmentTable, key);
+        // biome-ignore lint/style/noNonNullAssertion: we just created this
+        return getKey(doc, FragmentTable, key)!;
     };
     const newEvent = (type: Row<typeof EventTable>['type']) => {
         upsert(doc, EventTable, {
@@ -127,6 +129,8 @@ export async function generateFragments(
             });
         }
     }
+    // Get list of quirks we need to work around with the model's provider
+    const quirks = PROVIDER_QUIRKS[model.config.provider] ?? [];
 
     // TODO non-main fragment handling
 
@@ -193,20 +197,34 @@ export async function generateFragments(
         // Track citations for current text block (source events arrive before text-end)
         let currentBlockCitations: Citation[] = [];
 
-        const fragments = [];
+        const fragments: Row<typeof FragmentTable>[] = [];
         let firstTokenReceived = false;
         for await (const part of result.fullStream) {
             switch (part.type) {
                 case 'start':
                     newEvent('stream_start'); // We're connected to LLM provider!
                     break;
-                case 'reasoning-start':
-                    current = newFragment({
-                        type: 'thinking',
-                        text: new Y.Text(),
-                        providerOptions: undefined,
-                    });
+                case 'reasoning-start': {
+                    // Some "OpenAI-compatible" providers (looking at you, Baseten) may send
+                    // reasoning-start and reasoning-end for each token!
+                    const prev = fragments[fragments.length - 1];
+                    if (
+                        quirks.includes('repeat-reasoning-ends') &&
+                        prev?.data.type === 'thinking'
+                    ) {
+                        // Definitely do not create new fragments in that case
+                        current = prev;
+                        fragments.pop();
+                    } else {
+                        // Normal reasoning start
+                        current = newFragment({
+                            type: 'thinking',
+                            text: new Y.Text(),
+                            providerOptions: undefined,
+                        });
+                    }
                     break;
+                }
                 case 'reasoning-delta':
                     if (!firstTokenReceived) {
                         newEvent('first_token'); // LLM is generating something!
@@ -254,7 +272,9 @@ export async function generateFragments(
                     }
                     break;
                 case 'text-end':
-                    fragments.push(current);
+                    if (current) {
+                        fragments.push(current);
+                    }
                     // Attach collected citations to the fragment if any
                     if (
                         current?.data.type === 'text' &&
@@ -439,7 +459,11 @@ export async function generateFragments(
                             },
                         });
                     } else {
-                        throw new Error(); // Should never happen
+                        // If we're merging reasoning blocks to each other, backfilling data to them will fail
+                        // Hopefully the provider does not mind!
+                        if (!quirks.includes('repeat-reasoning-ends')) {
+                            throw new Error(); // Should never happen
+                        }
                     }
                 } else if (part.type === 'tool-call') {
                     const frag = toolCalls.get(part.toolCallId);
