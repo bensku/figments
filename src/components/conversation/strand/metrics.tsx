@@ -99,16 +99,22 @@ function MetricsPopover({ metrics }: { metrics: NodeMetrics }) {
             value: formatTokensPerSec(metrics.tokensPerSecond),
         });
     }
-    if (
-        metrics.inputTokens !== undefined ||
-        metrics.outputTokens !== undefined
-    ) {
-        const inTok = metrics.inputTokens ?? 0;
-        const outTok = metrics.outputTokens ?? 0;
+    if (metrics.inputTokens !== undefined) {
+        const cached =
+            metrics.cachedInputTokens !== undefined
+                ? ` (${metrics.cachedInputTokens} cached)`
+                : '';
         rows.push({
             icon: <Hash className="w-3 h-3" aria-hidden="true" />,
-            label: 'Tokens',
-            value: `${inTok} in / ${outTok} out`,
+            label: 'Input tokens',
+            value: `${metrics.inputTokens}${cached}`,
+        });
+    }
+    if (metrics.outputTokens !== undefined) {
+        rows.push({
+            icon: <Hash className="w-3 h-3" aria-hidden="true" />,
+            label: 'Output tokens',
+            value: `${metrics.outputTokens}`,
         });
     }
 
@@ -140,16 +146,24 @@ export function NodeMetricsFooter({ nodeId }: NodeMetricsFooterProps) {
         return null;
     }
 
-    const tokenSummary =
-        metrics.inputTokens !== undefined || metrics.outputTokens !== undefined
-            ? `${formatTokens(metrics.inputTokens ?? 0)}/${formatTokens(metrics.outputTokens ?? 0)}`
+    const hasTokens =
+        metrics.inputTokens !== undefined || metrics.outputTokens !== undefined;
+    const inputPart = hasTokens
+        ? formatTokens(metrics.inputTokens ?? 0)
+        : undefined;
+    const cachedPart =
+        hasTokens && metrics.cachedInputTokens !== undefined
+            ? formatTokens(metrics.cachedInputTokens)
             : undefined;
+    const outputPart = hasTokens
+        ? formatTokens(metrics.outputTokens ?? 0)
+        : undefined;
 
     return (
         // biome-ignore lint/a11y/useKeyWithClickEvents: Wrapper only stops click propagation
         // biome-ignore lint/a11y/noStaticElementInteractions: Wrapper only stops click propagation
         <div
-            className="mt-2 inline-flex items-center gap-3 text-xs text-gray-400"
+            className="mt-2 inline-flex items-center gap-4 text-xs text-gray-400"
             onClick={(e) => e.stopPropagation()}
         >
             {metrics.ttft !== undefined && (
@@ -166,12 +180,21 @@ export function NodeMetricsFooter({ nodeId }: NodeMetricsFooterProps) {
                     title="Generation time"
                 />
             )}
-            {tokenSummary !== undefined && (
-                <Chip
-                    icon={<Hash className="w-3 h-3" aria-hidden="true" />}
-                    value={tokenSummary}
+            {hasTokens && (
+                <span
+                    className="inline-flex items-center gap-1.5"
                     title="Tokens (input / output)"
-                />
+                >
+                    <Hash className="w-3 h-3" aria-hidden="true" />
+                    <span className="tabular-nums">{inputPart}</span>
+                    {cachedPart !== undefined && (
+                        <span className="tabular-nums">
+                            ({cachedPart} cached)
+                        </span>
+                    )}
+                    <span>/</span>
+                    <span className="tabular-nums">{outputPart}</span>
+                </span>
             )}
             {metrics.tokensPerSecond !== undefined && (
                 <Chip

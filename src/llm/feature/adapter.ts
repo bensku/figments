@@ -1,3 +1,4 @@
+import type { AmazonBedrockLanguageModelOptions } from '@ai-sdk/amazon-bedrock';
 import { type AnthropicProviderOptions, anthropic } from '@ai-sdk/anthropic';
 import type { GoogleGenerativeAIProviderOptions } from '@ai-sdk/google';
 import { vertexAnthropic } from '@ai-sdk/google-vertex/anthropic';
@@ -69,15 +70,21 @@ export function personaToProviderOptions(
         case 'anthropic':
         case 'vertexAnthropic': {
             const thinking = featureValue(persona, 'thinking') === true;
+            const adaptiveThinking = featureValue(persona, 'adaptiveThinking');
             const options: AnthropicProviderOptions = {
                 thinking: {
-                    type: thinking ? 'enabled' : 'disabled',
-                    budgetTokens: thinking
-                        ? ((featureValue(
-                              persona,
-                              'thinkingBudget',
-                          ) as number) ?? 4096)
-                        : undefined,
+                    type: thinking
+                        ? adaptiveThinking
+                            ? 'adaptive'
+                            : 'enabled'
+                        : 'disabled',
+                    budgetTokens:
+                        thinking && !adaptiveThinking
+                            ? ((featureValue(
+                                  persona,
+                                  'thinkingBudget',
+                              ) as number) ?? 4096)
+                            : undefined,
                 },
                 effort: featureValue(persona, 'effort') as
                     | 'low'
@@ -160,6 +167,51 @@ export function personaToProviderOptions(
             };
             return {
                 baseten: options,
+            };
+        }
+        case 'bedrock': {
+            const reasoning =
+                featureValue(persona, 'alwaysThinking') === true ||
+                featureValue(persona, 'thinking') === true;
+            const options: AmazonBedrockLanguageModelOptions = {
+                additionalModelRequestFields: {
+                    // TODO figure out what effort values are actually supported, AWS docs are lacking as usual
+                    reasoning_config: reasoning ? 'high' : undefined,
+                },
+            };
+            return {
+                bedrock: options,
+            };
+        }
+        case 'bedrockAnthropic': {
+            // Anthropic models have rather different (and again, poorly documented, configurations)
+            const thinking = featureValue(persona, 'thinking') === true;
+            const adaptiveThinking = featureValue(persona, 'adaptiveThinking');
+            const options: AmazonBedrockLanguageModelOptions = {
+                additionalModelRequestFields: {
+                    thinking: thinking
+                        ? {
+                              type: adaptiveThinking ? 'adaptive' : 'enabled',
+                              budget_tokens:
+                                  thinking && !adaptiveThinking
+                                      ? ((featureValue(
+                                            persona,
+                                            'thinkingBudget',
+                                        ) as number) ?? 4096)
+                                      : undefined,
+                          }
+                        : undefined,
+                    output_config: {
+                        effort: featureValue(persona, 'effort'),
+                    },
+                },
+                anthropicBeta:
+                    thinking && featureValue(persona, 'interleavedThinking')
+                        ? ['interleaved-thinking-2025-05-14']
+                        : undefined,
+            };
+            return {
+                bedrock: options,
             };
         }
         default:

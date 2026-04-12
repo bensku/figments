@@ -115,3 +115,13 @@ registerFeature({
     type: 'dummy',
     defaultValue: true,
 });
+
+registerFeature({
+    id: 'adaptiveThinking',
+    title: 'Adaptive thinking',
+    description:
+        'Let the model decide how long it thinks. Overrides thinking budget if enabled.',
+    type: 'toggle',
+    defaultValue: false,
+    requiresToggles: ['thinking', 'alwaysThinking'],
+});

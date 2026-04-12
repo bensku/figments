@@ -144,6 +144,7 @@ export const hocuspocus = new Hocuspocus({
                             update(doc, NodeTable, {
                                 key: node.key,
                                 inputTokens: undefined,
+                                cachedInputTokens: undefined,
                                 outputTokens: undefined,
                             });
                         }

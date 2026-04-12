@@ -52,6 +52,14 @@ export const NodeTable = table(
         inputTokens: z.number().optional(),
 
         /**
+         * Number of input tokens that the provider reported as cached.
+         * Should be smaller than total input tokens. Cached tokens are
+         * typically cheaper, so users/instance admins might be interested
+         * in knowing how well they're utilized.
+         */
+        cachedInputTokens: z.number().optional(),
+
+        /**
          * Number of output tokens reported by the model provider for this
          * generation. Optional because not all providers report usage.
          */

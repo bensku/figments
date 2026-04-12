@@ -29,6 +29,8 @@ export const ModelProvider = z.enum([
     'vertex',
     'vertexAnthropic',
     'baseten',
+    'bedrock',
+    'bedrockAnthropic',
 ]);
 
 export const ModelConfig = z.object({

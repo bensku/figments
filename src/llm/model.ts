@@ -1,3 +1,4 @@
+import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createBaseten } from '@ai-sdk/baseten';
 import { devToolsMiddleware } from '@ai-sdk/devtools';
@@ -89,6 +90,13 @@ function createLanguageModel(config: ModelConfig): LanguageModel {
                 apiKey,
             });
             return baseten(config.model);
+        }
+        case 'bedrock':
+        case 'bedrockAnthropic': {
+            const bedrock = createAmazonBedrock({
+                apiKey,
+            });
+            return bedrock(config.model);
         }
     }
 }

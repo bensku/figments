@@ -17,6 +17,8 @@ export interface NodeMetrics {
     tokensPerSecond?: number;
     /** Input tokens reported by the provider. */
     inputTokens?: number;
+    /** Cached input tokens reported by the provider. */
+    cachedInputTokens?: number;
     /** Output tokens reported by the provider. */
     outputTokens?: number;
 }
@@ -68,6 +70,7 @@ export function useNodeMetrics(nodeId: string): NodeMetrics {
                 : undefined;
 
         const inputTokens = node?.inputTokens;
+        const cachedInputTokens = node?.cachedInputTokens;
         const outputTokens = node?.outputTokens;
         const tokensPerSecond =
             outputTokens !== undefined &&
@@ -84,7 +87,13 @@ export function useNodeMetrics(nodeId: string): NodeMetrics {
             generation,
             tokensPerSecond,
             inputTokens,
+            cachedInputTokens,
             outputTokens,
         };
-    }, [events, node?.inputTokens, node?.outputTokens]);
+    }, [
+        events,
+        node?.inputTokens,
+        node?.cachedInputTokens,
+        node?.outputTokens,
+    ]);
 }

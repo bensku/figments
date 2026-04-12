@@ -10,7 +10,7 @@ import {
 import * as Y from 'yjs';
 import z from 'zod';
 import { CONFIG } from '@/config';
-import { anthropicCacheMiddleware } from '@/llm/cache';
+import { type CacheStyle, createCacheMiddleware } from '@/llm/cache';
 import { openDocServer } from '@/sync/server';
 import {
     ChoiceTable,
@@ -155,18 +155,23 @@ export async function generateFragments(
 
     let errored = false;
     let inputTokens: number | undefined;
+    let cachedInputTokens: number | undefined;
     let outputTokens: number | undefined;
     try {
-        // Wrap with cache middleware for Anthropic providers to reduce
+        // Wrap with cache middleware for supported providers to reduce
         // input token costs during multi-step tool use
-        const useCache =
+        const cacheStyle: CacheStyle | undefined =
             model.config.provider === 'anthropic' ||
-            model.config.provider === 'vertexAnthropic';
-        const wrappedModel = useCache
+            model.config.provider === 'vertexAnthropic'
+                ? 'anthropic'
+                : model.config.provider === 'bedrockAnthropic'
+                  ? 'bedrock'
+                  : undefined;
+        const wrappedModel = cacheStyle
             ? wrapLanguageModel({
                   // biome-ignore lint/suspicious/noExplicitAny: wrapLanguageModel expects LanguageModelV3
                   model: model.model as any,
-                  middleware: anthropicCacheMiddleware,
+                  middleware: createCacheMiddleware(cacheStyle),
               })
             : model.model;
 
@@ -389,9 +394,13 @@ export async function generateFragments(
         try {
             const usage = await result.totalUsage;
             inputTokens = usage.inputTokens;
+            cachedInputTokens = usage.inputTokenDetails.cacheReadTokens;
             outputTokens = usage.outputTokens;
         } catch (e) {
-            console.warn('Failed to read totalUsage from LLM response', e);
+            console.warn(
+                'Failed to read token usage statistics from provider response',
+                e,
+            );
         }
 
         // Backfill data that was not available during streaming to parts
@@ -523,11 +532,12 @@ export async function generateFragments(
         console.warn('LLM streaming crash', e);
     }
 
-    // Mark LLM node as completed
+    // Mark LLM node as completed and track token statistics
     update(doc, NodeTable, {
         key: node.key,
         completed: true,
         inputTokens,
+        cachedInputTokens,
         outputTokens,
     });
 

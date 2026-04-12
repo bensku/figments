@@ -4,8 +4,7 @@ import type { ModelProvider } from '@/config/schema';
 /**
  * List of provider quirks/bugs we have workarounds for.
  */
-export type ProviderQuirk = 'repeat-reasoning-ends' // Provider emits repeated reasoning-end for each reasoning-delta
-;
+export type ProviderQuirk = 'repeat-reasoning-ends'; // Provider emits repeated reasoning-end for each reasoning-delta
 
 /**
  * Providers mapped to various quirks/bugs their APIs have.
