@@ -13,6 +13,12 @@ export interface NodeMetrics {
     ttft?: number;
     /** Generation time (first_token -> stream_end), in ms. */
     generation?: number;
+    /**
+     * Total time from generate_start to stream_end, in ms. Falls back to
+     * the sum of available subcomponents when either bookend event is
+     * missing.
+     */
+    totalTime?: number;
     /** Output tokens per second of generation. */
     tokensPerSecond?: number;
     /** Input tokens reported by the provider. */
@@ -69,6 +75,20 @@ export function useNodeMetrics(nodeId: string): NodeMetrics {
                 ? streamEnd - firstToken
                 : undefined;
 
+        let totalTime: number | undefined;
+        if (generateStart !== undefined && streamEnd !== undefined) {
+            totalTime = streamEnd - generateStart;
+        } else {
+            const parts = [
+                contextPrep,
+                providerHandshake,
+                ttft,
+                generation,
+            ].filter((x): x is number => x !== undefined);
+            totalTime =
+                parts.length > 0 ? parts.reduce((a, b) => a + b, 0) : undefined;
+        }
+
         const inputTokens = node?.inputTokens;
         const cachedInputTokens = node?.cachedInputTokens;
         const outputTokens = node?.outputTokens;
@@ -85,6 +105,7 @@ export function useNodeMetrics(nodeId: string): NodeMetrics {
             providerHandshake,
             ttft,
             generation,
+            totalTime,
             tokensPerSecond,
             inputTokens,
             cachedInputTokens,

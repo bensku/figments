@@ -1,4 +1,7 @@
 import z from 'zod';
+import { useNodeMetrics } from '@/hooks/useNodeMetrics';
+import { NodeFragmentList } from '../fragment-list';
+import { NodeMetricsFooter } from '../metrics';
 import {
     formatCharCount,
     ToolExpandButton,
@@ -41,6 +44,13 @@ function unwrapResult(result: unknown): unknown {
     return result;
 }
 
+function formatMs(ms: number): string {
+    if (ms < 1000) {
+        return `${Math.round(ms)}ms`;
+    }
+    return `${(ms / 1000).toFixed(1)}s`;
+}
+
 export function AgentCallRenderer({
     input,
     result: rawResult,
@@ -56,9 +66,17 @@ export function AgentCallRenderer({
     const response = parsedResult.success
         ? parsedResult.data.response
         : undefined;
+    const messageId = parsedResult.success
+        ? parsedResult.data.messageId
+        : undefined;
     const hasResponse = !!response && response.length > 0;
-    const canExpand = input.message.length > 0 || hasResponse;
+    const canExpand = input.message.length > 0 || hasResponse || !!messageId;
     const { expanded, toggle } = useToolExpand(canExpand);
+    const { expanded: detailsExpanded, toggle: toggleDetails } = useToolExpand(
+        !!messageId,
+    );
+
+    const metrics = useNodeMetrics(messageId ?? '');
 
     return (
         <div className="text-sm">
@@ -71,6 +89,11 @@ export function AgentCallRenderer({
                 {hasResponse && (
                     <span className="ml-1 text-gray-500">
                         &middot; {formatCharCount(response.length)}
+                    </span>
+                )}
+                {metrics.totalTime !== undefined && (
+                    <span className="ml-1 text-gray-500">
+                        &middot; {formatMs(metrics.totalTime)}
                     </span>
                 )}
             </ToolExpandButton>
@@ -86,6 +109,24 @@ export function AgentCallRenderer({
                             </pre>
                         </div>
                     )}
+                    {messageId && (
+                        <div>
+                            <ToolExpandButton
+                                expanded={detailsExpanded}
+                                onToggle={toggleDetails}
+                            >
+                                <span>Progress</span>
+                            </ToolExpandButton>
+                            {detailsExpanded && (
+                                <ToolExpandPanel>
+                                    <NodeFragmentList
+                                        nodeId={messageId}
+                                        skipFinalText
+                                    />
+                                </ToolExpandPanel>
+                            )}
+                        </div>
+                    )}
                     {hasResponse && (
                         <div>
                             <div className="text-xs text-gray-400 mb-1">
@@ -96,6 +137,7 @@ export function AgentCallRenderer({
                             </pre>
                         </div>
                     )}
+                    {messageId && <NodeMetricsFooter nodeId={messageId} />}
                 </ToolExpandPanel>
             )}
         </div>

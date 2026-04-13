@@ -94,7 +94,7 @@ export function agentToTool(
                         parentId: userNode,
                         role: 'llm',
                         createdAt: Date.now(),
-                        author: agent.model,
+                        author: agent.key,
                         summary: '',
                         completed: false,
                     });
